@@ -1,0 +1,10 @@
+# personal data: captures, logs, health exports
+captures/
+Even_health_data*/
+*.zip
+*.log
+*.pcap
+*.pcapng
+
+__pycache__/
+*.pyc
