@@ -245,3 +245,17 @@ side is visible) followed by our own read-only frames.
   fail our CRC-32 check; we skip them.
 - System sub-command `0x84` exists (seen as an ack to the Even app); unknown.
 - Sleep still not seen: both sleep requests were acked with no data.
+
+## Third capture, 2026-11-17 (listener app 0.2)
+
+- 75 seconds on the link with no drops, on the same connection that 0.1 had
+  been knocking over. The ring reported the `bae80013` subscription already on,
+  so the app wrote nothing during setup.
+- Two requests a few seconds apart, acknowledging off: both returned only the
+  current day. This does not settle the history question, because the same
+  connection had already been acknowledged earlier. The deciding test is a
+  request on a fresh connection with acknowledging off.
+- Ring gestures made during the capture produced nothing on `bae80013`, and
+  nothing reached us on `bae80011` (which we no longer subscribe to).
+- The ring pushed system `wearStatus` (0x03) by itself, one data byte, value 2.
+  Meaning of the value not yet known.
