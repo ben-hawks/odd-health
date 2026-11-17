@@ -2,6 +2,7 @@ package dev.oddhealth.app.ring
 
 import dev.oddhealth.app.ui.model.RingEvent
 import dev.oddhealth.app.ui.model.RingStatus
+import dev.oddhealth.app.ui.model.WearState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +13,7 @@ import java.time.LocalTime
 /** Live ring state from the Bluetooth service, for the UI. Not persisted (except firmware, in settings). */
 class RingState(firmware: String?) {
     private val _status = MutableStateFlow(
-        RingStatus(name = "Even R1", connected = false, batteryPercent = null, charging = false, worn = null,
+        RingStatus(name = "Even R1", connected = false, batteryPercent = null, charging = false, wear = WearState.UNKNOWN,
             firmware = firmware, lastData = null),
     )
     val status: StateFlow<RingStatus> = _status.asStateFlow()

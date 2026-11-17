@@ -17,10 +17,28 @@ data class RingStatus(
     val connected: Boolean,
     val batteryPercent: Int?,
     val charging: Boolean,
-    val worn: Boolean?,
+    val wear: WearState,
     val firmware: String?,
     val lastData: Instant?,
 )
+
+/**
+ * What the ring last said about being worn (system wearStatus): 1 on the
+ * charger, 2 on a finger, 3 not worn. The ring only re-checks at some moments
+ * (charger changes, failed measurements), so a short removal can go unreported.
+ */
+enum class WearState {
+    UNKNOWN, WORN, NOT_WORN, ON_CHARGER;
+
+    companion object {
+        fun fromRing(value: Int) = when (value) {
+            1 -> ON_CHARGER
+            2 -> WORN
+            3 -> NOT_WORN
+            else -> UNKNOWN
+        }
+    }
+}
 
 enum class HealthConnectState { READY, NEEDS_PERMISSION, NOT_INSTALLED, UNSUPPORTED }
 

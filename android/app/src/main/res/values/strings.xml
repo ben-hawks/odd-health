@@ -44,6 +44,8 @@
     <string name="status_ring">Ring</string>
     <string name="ring_connected">Connected</string>
     <string name="ring_connected_worn">Connected · on your finger</string>
+    <string name="ring_connected_not_worn">Connected · not being worn</string>
+    <string name="ring_connected_charger">Connected · on the charger</string>
     <string name="ring_not_connected">Not connected</string>
     <string name="ring_battery">%1$d%% battery</string>
     <string name="battery">Battery</string>

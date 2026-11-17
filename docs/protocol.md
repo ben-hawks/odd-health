@@ -296,3 +296,24 @@ For us this means:
 
 wearStatus is 2 while worn; 3 is probably "not detected", since it appeared
 for 40 seconds in the middle of the night. Unconfirmed.
+
+## Wear and charging test, 2026-11-17 (app 0.17)
+
+Ring on the charger 09:25–09:54, off the finger 12:16–12:20.
+
+| Time | Event | wearStatus (system 0x03) |
+|---|---|---|
+| 09:25:08 | put on the charger; deviceStatus "charging" at the same moment | 1 |
+| 09:54:25 | taken off the charger, not on a finger | 1, then 3 |
+| 10:06:18 | put on a finger | 2 |
+| 12:16–12:20 | taken off for 4 minutes, put back | nothing sent |
+
+So **1 = on the charger, 2 = worn, 3 = not worn**. The ring does not watch
+wear continuously: it reports changes at charger events and when a
+measurement fails (the 40-second "3" seen overnight), so a short removal
+between heart-rate readings can go unreported.
+
+While charging, the ring pushes deviceStatus every 30 seconds (34 % to 67 %
+in 30 minutes). The phone link dropped and reconnected about 50 times in those
+30 minutes (GATT status 8 and 133) and stayed steady once the ring was back on
+a finger; this appears to be the ring's behaviour on the charger.

@@ -20,6 +20,7 @@ import dev.oddhealth.app.ui.model.SyncTypeRow
 import dev.oddhealth.app.ui.model.TodayState
 import dev.oddhealth.app.ui.model.TypeStatus
 import dev.oddhealth.app.ui.model.VitalSummary
+import dev.oddhealth.app.ui.model.WearState
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -33,7 +34,7 @@ object SampleData {
     val date: LocalDate = LocalDate.of(2026, 11, 17)
     private val now: Instant = Instant.parse("2026-11-17T17:42:00Z")
 
-    val ring = RingStatus("EVEN R1 8CA05D", connected = true, batteryPercent = 34, charging = false, worn = true,
+    val ring = RingStatus("EVEN R1 8CA05D", connected = true, batteryPercent = 34, charging = false, wear = WearState.WORN,
         firmware = "2.3.2.0008", lastData = now.minusSeconds(180))
 
     val sync = SyncStatus(HealthConnectState.READY, lastSync = now.minusSeconds(240), pending = 0)

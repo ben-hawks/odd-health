@@ -115,7 +115,7 @@ class DataTest {
             val records = repo.range(from, date.plusDays(1).atStartOfDay(zone).toInstant()).first()
             val skins = repo.byKind(RecordKind.SKIN_TEMPERATURE).first().filterIsInstance<SkinTemperature>()
             val day = DayData(date, zone, records, emptyMap(), emptySet(), skins)
-            val t = UiMapping.today(day, RingStatus("r", false, null, false, null, null, null), SyncStatus(HealthConnectState.READY, null, 0))
+            val t = UiMapping.today(day, RingStatus("r", false, null, false, dev.oddhealth.app.ui.model.WearState.UNKNOWN, null, null), SyncStatus(HealthConnectState.READY, null, 0))
             println("DAY $date sleep=${t.sleep?.let { "${it.bedtime}-${it.wake} ${it.asleep}" }} hr=${t.heartRate?.let { "${it.min}-${it.max} avg ${it.avg}" }} " +
                 "rhr=${t.heartRate?.resting} steps=${t.activity?.steps} kcal=${t.activity?.totalKcal} skin=${t.skin}")
         }

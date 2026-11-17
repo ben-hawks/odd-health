@@ -51,6 +51,7 @@ import dev.oddhealth.app.ui.components.RefreshBox
 import dev.oddhealth.app.ui.components.Space
 import dev.oddhealth.app.ui.components.ago
 import dev.oddhealth.app.ui.model.RingScreenState
+import dev.oddhealth.app.ui.model.WearState
 import java.time.Instant
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
@@ -102,7 +103,9 @@ fun RingScreen(
                                     Text(
                                         when {
                                             !ring.connected -> stringResource(R.string.ring_not_connected)
-                                            ring.worn == true -> stringResource(R.string.ring_connected_worn)
+                                            ring.wear == WearState.WORN -> stringResource(R.string.ring_connected_worn)
+                                            ring.wear == WearState.NOT_WORN -> stringResource(R.string.ring_connected_not_worn)
+                                            ring.wear == WearState.ON_CHARGER -> stringResource(R.string.ring_connected_charger)
                                             else -> stringResource(R.string.ring_connected)
                                         },
                                         style = MaterialTheme.typography.bodyMedium,

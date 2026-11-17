@@ -5,6 +5,10 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+- Ring tab shows whether the ring is on your finger, not being worn, or on the
+  charger (wear states confirmed by testing). The ring only re-checks wear at
+  some moments, so a short removal may not show.
+
 - Resting heart rate: with Frequent updates on overnight, it is now the lowest
   30-minute average of individual readings during sleep (at least 12
   readings; no gaps over 30 minutes in the window), which is closer to a true

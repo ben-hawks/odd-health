@@ -27,6 +27,7 @@ import android.os.Looper
 import android.os.SystemClock
 import dev.oddhealth.app.MainActivity
 import dev.oddhealth.app.R
+import dev.oddhealth.app.ui.model.WearState
 import dev.oddhealth.app.graph
 import dev.oddhealth.core.ingest.RingIngest
 import dev.oddhealth.r1.DeviceInfo
@@ -367,12 +368,20 @@ class RingService : Service() {
                 }
             }
             when (decoded) {
-                is DeviceStatus -> graph.ring.update { it.copy(batteryPercent = decoded.batteryPercent, charging = decoded.chargeState == 1) }
+                is DeviceStatus -> graph.ring.update {
+                    // Charging also means it's on the charger, which the ring reports separately as wear state 1.
+                    val charging = decoded.chargeState == 1
+                    it.copy(
+                        batteryPercent = decoded.batteryPercent,
+                        charging = charging,
+                        wear = if (charging) WearState.ON_CHARGER else if (it.wear == WearState.ON_CHARGER) WearState.UNKNOWN else it.wear,
+                    )
+                }
                 is DeviceInfo -> {
                     graph.settings.firmware = decoded.firmware
                     graph.ring.update { it.copy(firmware = decoded.firmware) }
                 }
-                is WearStatus -> graph.ring.update { it.copy(worn = decoded.state == 2) }
+                is WearStatus -> graph.ring.update { it.copy(wear = WearState.fromRing(decoded.state)) }
                 else -> {}
             }
             if (decoded != null && frame.module == R1.MODULE_HEALTH && frame.status == R1.STATUS_PUSH) {
