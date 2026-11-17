@@ -331,5 +331,8 @@ pairAuth (acked as usual):
 
 The firmware analysis says the sleep-detail, heart-rate-measure and
 SpO2-measure handlers require request-flag bit 1 and reject bit 0, which
-would be status 2. Status 0 and 1 being ignored fits that. Status 2 is
-untested: `001ab047b8640264044f0206020c001229`.
+would be status 2. Status 0 and 1 being ignored fits that, but status 2
+(`001ab047b8640264044f0206020c001229`) was ignored too: no reply within the 8
+seconds the log covered. Sleep detail looks unavailable to a phone client, so
+the nightly value inside the sleep record remains the only temperature the
+ring hands out.
