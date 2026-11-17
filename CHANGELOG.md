@@ -5,6 +5,12 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+- Resting heart rate: with Frequent updates on overnight, it is now the lowest
+  30-minute average of individual readings during sleep (at least 12
+  readings; no gaps over 30 minutes in the window), which is closer to a true
+  resting rate than the lowest hourly average. Other nights keep the hourly
+  method; the heart-rate detail says which was used.
+
 - Update check: finds the newest release that has its APK, instead of only
   the newest release. While a just-published release was still building, the
   app reported "latest version" and missed the previous one; it now offers the

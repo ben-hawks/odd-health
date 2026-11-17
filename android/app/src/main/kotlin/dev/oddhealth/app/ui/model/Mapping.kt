@@ -73,7 +73,8 @@ interface Words {
     fun steps(n: Int): String
     fun stepsUnit(): String
     fun restingLabel(): String
-    fun restingDetail(): String
+    /** [readings]: how many readings the estimate came from; 0 = hourly averages. */
+    fun restingDetail(readings: Int): String
     fun kcal(n: Int, active: Int): String
 }
 
@@ -172,7 +173,7 @@ object UiMapping {
                     vital = v,
                     rows = listOfNotNull(
                         day.resting?.takeIf { metric == Metric.HEART_RATE }?.let {
-                            DetailRow(w.restingLabel(), "${it.bpm} $unit", w.restingDetail(), day.mark(it))
+                            DetailRow(w.restingLabel(), "${it.bpm} $unit", w.restingDetail(it.readings), day.mark(it))
                         },
                     ) + (hourRows + liveRows).sortedByDescending { it.first }.map { it.second },
                     appOnlyNote = if (metric == Metric.HEART_RATE) w.hrNote() else null,

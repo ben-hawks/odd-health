@@ -134,6 +134,34 @@ class CoreTest {
     }
 
     @Test
+    fun restingHeartRateUsesReadingsWhenThereAreEnough() {
+        val start = Instant.parse("2026-11-17T07:00:00Z")
+        val night = SleepSession(start, start.plusSeconds(6 * 3600), cst, emptyList(), null, null, DataSource.RING, 1)
+        val hours = (0L..5L).map { HourlyVital(RecordKind.HEART_RATE_HOUR, start.plusSeconds(it * 3600), cst, 50, 62, 75, DataSource.RING, 1) }
+        fun reading(i: Int, bpm: Int) = HeartRateReading(start.plusSeconds(i * 585L), cst, bpm, DataSource.RING, 2)
+        // 36 readings ~10 minutes apart; one low outlier (40) and a calm stretch of three at 52, 53, 54.
+        val readings = (0 until 36).map { i ->
+            when (i) {
+                5 -> reading(i, 40)
+                20 -> reading(i, 52)
+                21 -> reading(i, 53)
+                22 -> reading(i, 54)
+                else -> reading(i, 60)
+            }
+        }
+        val rhr = dev.oddhealth.core.model.RestingHeartRateEstimate.forNight(night, hours, readings)!!
+        assertEquals(53 to 36, rhr.bpm to rhr.readings) // the outlier alone doesn't win
+
+        // Too few readings: back to hourly averages.
+        val few = dev.oddhealth.core.model.RestingHeartRateEstimate.forNight(night, hours, readings.take(8))!!
+        assertEquals(62 to 0, few.bpm to few.readings)
+
+        // Readings with gaps over 30 minutes between every one: no valid window, hourly again.
+        val sparse = (0 until 12).map { HeartRateReading(start.plusSeconds(it * 1800L), cst, 50, DataSource.RING, 2) }
+        assertEquals(0, dev.oddhealth.core.model.RestingHeartRateEstimate.forNight(night, hours, sparse)!!.readings)
+    }
+
+    @Test
     fun skinBaselineIsMedianOfEarlierNights() {
         fun night(day: Long, c: Double) =
             SkinTemperature(Instant.ofEpochSecond(day * 86400), Instant.ofEpochSecond(day * 86400 + 28800), cst, c, DataSource.RING, 1)

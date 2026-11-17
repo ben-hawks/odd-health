@@ -102,8 +102,9 @@
     <string name="n_steps">%1$d steps</string>
     <string name="note_hr">Hourly minimum and maximum are shown here only. Health Connect gets the hourly average, each live reading, and the resting heart rate estimate.</string>
     <string name="resting_hr">Resting heart rate</string>
-    <string name="resting_hr_detail">Estimated: lowest hourly average during last night\'s sleep</string>
-    <string name="t_rhr">Estimated: lowest hourly average during sleep</string>
+    <string name="resting_hr_detail">Estimated from hourly averages: the lowest during last night\'s sleep</string>
+    <string name="resting_hr_detail_readings">Estimated from %1$d readings: the lowest 30-minute average during last night\'s sleep</string>
+    <string name="t_rhr">Estimated per night: lowest 30-minute average during sleep with Frequent updates on, otherwise the lowest hourly average</string>
     <string name="t_body_temp">Nightly temperature</string>
     <string name="hc_body_temp">Body temperature (finger)</string>
     <string name="t_body_temp_note">Measured at the finger, so about 1 °C below core temperature</string>
@@ -156,7 +157,7 @@
     <string name="about_not_for_title">Not for</string>
     <string name="about_not_for_body">• Medical decisions, including starting, stopping or changing any treatment or medication\n• Monitoring anyone\'s health without their knowledge or consent\n• Detecting or alerting on emergencies: the app does not raise alarms, and data can arrive hours late\n• Clinical, research or legal evidence\n• Monitoring of infants, or of anyone whose safety depends on it</string>
     <string name="about_accuracy_title">About the numbers</string>
-    <string name="about_accuracy_body">The ring reports heart rate, HRV and blood oxygen as hourly averages, so short changes don\'t show. Resting heart rate is an estimate made by this app from those averages, and reads higher than a true resting rate. Temperature is measured at the finger and reads about 1 °C below core temperature. Sleep stages and the sleep score come from the ring\'s own algorithms. This app reads the ring through an unofficial, reverse-engineered protocol: a ring firmware update can change what it sends, and values can be wrong or missing without warning.</string>
+    <string name="about_accuracy_body">The ring reports heart rate, HRV and blood oxygen as hourly averages, so short changes don\'t show. Resting heart rate is an estimate made by this app: from individual readings when Frequent updates collected enough overnight, otherwise from hourly averages, which reads higher. Temperature is measured at the finger and reads about 1 °C below core temperature. Sleep stages and the sleep score come from the ring\'s own algorithms. This app reads the ring through an unofficial, reverse-engineered protocol: a ring firmware update can change what it sends, and values can be wrong or missing without warning.</string>
     <string name="about_data_title">Your data</string>
     <string name="about_data_body">Everything stays on this phone. Odd Health has no account, no servers, no analytics and no ads. Its only internet use is checking GitHub for app updates and downloading them, which sends no health data. Data is stored in the app\'s private storage and excluded from cloud backups and device transfers, so uninstalling the app deletes it.\n\nData only leaves the app when you choose to: by writing it to Health Connect, or by sharing debug logs (off by default), which contain health data and your ring\'s Bluetooth address.</string>
     <string name="about_hc_title">Health Connect</string>

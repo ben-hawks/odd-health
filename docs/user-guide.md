@@ -82,8 +82,12 @@ Health Connect about 20 seconds after it arrives.
 
 - Heart rate, HRV and blood oxygen arrive as **hourly** averages; the ring does
   not store anything finer.
-- **Resting heart rate** is the app's estimate: the lowest hourly average during
-  your main sleep. It reads higher than a true resting rate.
+- **Resting heart rate** is the app's estimate for each night. With
+  **Frequent updates** on overnight, it is the lowest average of three
+  consecutive readings (about 30 minutes) during your main sleep, once the
+  night has at least 12 readings. Otherwise it is the lowest hourly average,
+  which reads a few bpm higher. The heart-rate detail says which one a night
+  used.
 - **Temperature** is measured at the finger, about 1 °C below core temperature.
   Health Connect gets it as body temperature (location: finger), and as skin
   temperature change from your own 30-night baseline once there are at least

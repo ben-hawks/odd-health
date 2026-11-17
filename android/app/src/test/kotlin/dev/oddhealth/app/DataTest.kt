@@ -93,6 +93,14 @@ class DataTest {
         repo.save(listOf(HourlyVital(RecordKind.HEART_RATE_HOUR, start.plusSeconds(2 * 3600), cst, 45, 52, 60, DataSource.RING, 3)))
         assertEquals(52, (repo.byKind(RecordKind.RESTING_HEART_RATE).first().single() as dev.oddhealth.core.model.RestingHeartRate).bpm)
         assertEquals(0, repo.backfillRestingHeartRate()) // already has one
+
+        // Readings every ~10 minutes through the night replace the hourly estimate.
+        val readings = (0 until 30).map {
+            dev.oddhealth.core.model.HeartRateReading(start.plusSeconds(it * 585L), cst, if (it in 10..12) 47 else 58, DataSource.RING, 4)
+        }
+        repo.save(readings)
+        val rhr2 = repo.byKind(RecordKind.RESTING_HEART_RATE).first().single() as dev.oddhealth.core.model.RestingHeartRate
+        assertEquals(47 to 30, rhr2.bpm to rhr2.readings)
     }
 
     /** Local check against a real export: ODD_EXPORT=/path/to.zip; prints a summary only. */
@@ -131,7 +139,7 @@ class DataTest {
         override fun steps(n: Int) = "$n"
         override fun stepsUnit() = "steps"
         override fun restingLabel() = "resting"
-        override fun restingDetail() = "est"
+        override fun restingDetail(readings: Int) = "est $readings"
         override fun kcal(n: Int, active: Int) = "$n"
     }
 }

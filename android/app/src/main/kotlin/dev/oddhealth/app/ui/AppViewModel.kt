@@ -103,7 +103,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         override fun steps(n: Int) = s(R.string.n_steps, n)
         override fun stepsUnit() = s(R.string.unit_steps)
         override fun restingLabel() = s(R.string.resting_hr)
-        override fun restingDetail() = s(R.string.resting_hr_detail)
+        override fun restingDetail(readings: Int) =
+            if (readings > 0) s(R.string.resting_hr_detail_readings, readings) else s(R.string.resting_hr_detail)
         override fun kcal(n: Int, active: Int) = s(R.string.kcal_line, n, active)
     }
 

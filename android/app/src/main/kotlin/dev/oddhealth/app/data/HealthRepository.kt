@@ -1,6 +1,7 @@
 package dev.oddhealth.app.data
 
 import dev.oddhealth.core.model.HealthRecord
+import dev.oddhealth.core.model.HeartRateReading
 import dev.oddhealth.core.model.HourlyVital
 import dev.oddhealth.core.model.RecordKind
 import dev.oddhealth.core.model.RestingHeartRateEstimate
@@ -31,15 +32,24 @@ class HealthRepository(private val dao: RecordDao) : SyncLedger, SyncContext {
         val estimates = dao.byKindOnce(RecordKind.SLEEP_SESSION.id).map(RecordCodec::fromRow).filterIsInstance<SleepSession>()
             .filter { it.end.epochSecond !in have }
             .mapNotNull { night ->
-                val hours = dao.overlapping(RecordKind.HEART_RATE_HOUR.id, night.start.epochSecond, night.end.epochSecond)
-                    .map(RecordCodec::fromRow).filterIsInstance<HourlyVital>()
-                RestingHeartRateEstimate.forNight(night, hours)
+                estimate(night)
             }
         return if (estimates.isEmpty()) 0 else dao.upsertNewer(estimates.map(RecordCodec::toRow))
     }
 
+    private suspend fun estimate(night: SleepSession) = RestingHeartRateEstimate.forNight(
+        night,
+        dao.overlapping(RecordKind.HEART_RATE_HOUR.id, night.start.epochSecond, night.end.epochSecond)
+            .map(RecordCodec::fromRow).filterIsInstance<HourlyVital>(),
+        // Readings are instants (end == start); widen by a second so one at the very start counts.
+        dao.overlapping(RecordKind.HEART_RATE_READING.id, night.start.epochSecond - 1, night.end.epochSecond + 1)
+            .map(RecordCodec::fromRow).filterIsInstance<HeartRateReading>(),
+    )
+
     private suspend fun updateRestingHeartRate(saved: List<HealthRecord>) {
-        val relevant = saved.filter { it.kind == RecordKind.SLEEP_SESSION || it.kind == RecordKind.HEART_RATE_HOUR }
+        val relevant = saved.filter {
+            it.kind == RecordKind.SLEEP_SESSION || it.kind == RecordKind.HEART_RATE_HOUR || it.kind == RecordKind.HEART_RATE_READING
+        }
         if (relevant.isEmpty()) return
         // Nights touched by any saved sleep or heart-rate hour, found per day to keep queries small.
         val nights = HashMap<String, SleepSession>()
@@ -48,13 +58,11 @@ class HealthRepository(private val dao: RecordDao) : SyncLedger, SyncContext {
             val to = group.maxOf { it.end }.plusSeconds(86_400).epochSecond
             dao.overlapping(RecordKind.SLEEP_SESSION.id, from, to).map(RecordCodec::fromRow)
                 .filterIsInstance<SleepSession>()
-                .filter { n -> group.any { it.start < n.end && it.end > n.start } }
+                .filter { n -> group.any { it.start <= n.end && it.end >= n.start } }
                 .forEach { nights[it.key] = it }
         }
         val estimates = nights.values.mapNotNull { night ->
-            val hours = dao.overlapping(RecordKind.HEART_RATE_HOUR.id, night.start.epochSecond, night.end.epochSecond)
-                .map(RecordCodec::fromRow).filterIsInstance<HourlyVital>()
-            RestingHeartRateEstimate.forNight(night, hours)
+            estimate(night)
         }
         if (estimates.isNotEmpty()) dao.upsertNewer(estimates.map(RecordCodec::toRow))
     }

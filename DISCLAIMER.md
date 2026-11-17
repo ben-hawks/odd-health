@@ -39,9 +39,11 @@ anything this app shows.
 - **Coarse resolution.** The ring stores heart rate, HRV and blood oxygen as
   hourly minimum, average and maximum, and activity in 10-minute blocks.
   Short events do not show.
-- **Estimates.** Resting heart rate is calculated by this app as the lowest
-  hourly average during sleep, so it reads higher than a true resting heart
-  rate. Sleep stages, sleep score and efficiency come from the ring's own
+- **Estimates.** Resting heart rate is calculated by this app, not measured
+  by the ring: the lowest 30-minute average of individual readings during
+  sleep when Frequent updates collected enough of them, otherwise the lowest
+  hourly average, which reads higher. Readings are about 10 minutes apart, so
+  neither is a true resting heart rate. Sleep stages, sleep score and efficiency come from the ring's own
   algorithms, which are not validated by this project.
 - **Finger temperature.** Temperature is measured at the finger, about 1 °C
   below core body temperature, and varies with room temperature and fit. It is

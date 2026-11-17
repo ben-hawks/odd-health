@@ -24,7 +24,7 @@ import java.time.ZoneOffset
  * | activity        | steps   | active kcal| total kcal|         |                         |
  * | sleep           | score+1 | effic.+1   |           |         | stage:startSec:endSec;… |
  * | skin temp       |         |            |           | celsius |                         |
- * | resting HR      | bpm     |            |           |         |                         |
+ * | resting HR      | bpm     | readings   |           |         |                         |
  *
  * Score and efficiency are stored plus one so 0 can mean "none".
  */
@@ -41,7 +41,7 @@ object RecordCodec {
                 text = r.stages.joinToString(";") { "${it.type.ordinal}:${it.start.epochSecond}:${it.end.epochSecond}" },
             )
             is SkinTemperature -> base.copy(real = r.celsius)
-            is RestingHeartRate -> base.copy(a = r.bpm)
+            is RestingHeartRate -> base.copy(a = r.bpm, b = r.readings)
         }
     }
 
@@ -66,7 +66,7 @@ object RecordCodec {
                 source = source, version = row.version,
             )
             RecordKind.SKIN_TEMPERATURE -> SkinTemperature(start, end, zone, row.real ?: 0.0, source, row.version)
-            RecordKind.RESTING_HEART_RATE -> RestingHeartRate(start, zone, row.a, source, row.version)
+            RecordKind.RESTING_HEART_RATE -> RestingHeartRate(start, zone, row.a, source, row.version, readings = row.b)
         }
     }
 }
