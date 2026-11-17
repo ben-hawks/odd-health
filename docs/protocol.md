@@ -8,20 +8,18 @@ Almost everything here was first worked out by the
 in August 2026. It is restated here so this repo stands alone. Each section is
 marked:
 
+- **confirmed** — reproduced on our ring (firmware 2.3.2.0008, hardware
+  603MV1.9.3), see [First capture](#first-capture-2026-11-17)
 - **documented** — taken from hermes-g2, not yet reproduced on our ring
-- **export-consistent** — also agrees with our own Even health export
 - **open** — unknown or unverified
 
-Nothing below has been confirmed against our ring over the air yet. That is the
-next step; see [capture-guide.md](capture-guide.md).
-
-## Link (documented)
+## Link (confirmed)
 
 - The ring must already be bonded to the phone by the official Even app. The
   link is encrypted; there is no application-level secret.
-- The ring serves **one phone session at a time**. If the Even app is running
-  it holds the session and a second client's commands time out. Force-stop the
-  Even app before connecting. The glasses use a separate link; see
+- The ring has one phone link. On Android every app connected to the ring
+  shares it: each app's commands are answered and every app receives every
+  notification. The glasses use a separate link; see
   [ring-and-glasses.md](ring-and-glasses.md).
 - Request MTU 247 after service discovery, before subscribing.
 
@@ -36,7 +34,7 @@ Service `bae80001-4f05-4503-8e65-3af1f7329d1f`:
 A second, protobuf-framed channel (`0xAA` prefix) also exists and the official
 app polls it for live values. It is not needed for health history.
 
-## Framing (documented)
+## Framing (confirmed)
 
 Every write and every notification:
 
@@ -70,7 +68,7 @@ Ring → phone frames carry CRC-16/MODBUS computed with bytes 10..11 as zero.
 identified (it is not a common CRC-16 over any obvious span). The ring reportedly
 does not check it; we send CCITT-FALSE like hermes-g2 does.
 
-## Commands (documented)
+## Commands (confirmed, except where noted)
 
 Health (`module=2`), `sub-command=1` (daily). A request is a bare frame with no data.
 
@@ -78,7 +76,7 @@ Health (`module=2`), `sub-command=1` (daily). A request is a bare frame with no 
 |---:|---|
 | 1 | heart rate |
 | 2 | SpO2 |
-| 3 | temperature (ring reportedly does not answer) |
+| 3 | temperature (no answer from our ring, not even an ack) |
 | 4 | HRV |
 | 5 | activity: steps and calories |
 | 6 | sleep |
@@ -92,7 +90,7 @@ System (`module=1`, `cmd=0`), selected by sub-command:
 | 0x01 | deviceStatus | response `[battery percent][state: 1 charging, 2 not charging, 3 full]…` |
 | 0x02 | deviceInfo | response: two 16-byte NUL-padded strings, firmware then hardware version |
 | 0x05 | systemTime | status 2, data `[tz offset minutes i16 LE][epoch seconds u32 LE]` |
-| 0x08 | pairAuth | status 0, data `01`; opens the session; ring acks with data `00` |
+| 0x08 | pairAuth | status 0, data `01`; opens the session; ring acks with data `00` and also sends a push with data `00` |
 | 0x0E | healthSettingsStatus | set: `[epoch u32 LE][01][19 zero bytes]` enables tracking |
 | 0x7E | packetAck | status 1, see below |
 
@@ -102,6 +100,9 @@ change firmware, pairing, keys, stored data, power state or the ring's link to
 the glasses. `tools/r1/protocol.py` refuses to build them.
 
 ### Session
+
+Every request gets an ack (status 3, same sequence number, usually no data).
+Data follows as separate pushes (status 2) numbered by the ring's own counter.
 
 1. Write the pairAuth frame; wait for its ack on `bae80013`.
 2. Optionally deviceInfo, deviceStatus.
@@ -121,7 +122,7 @@ on activity rows, which is the app's name for multi-packet history batches.
 
 ## Payloads
 
-### Heart rate, SpO2, HRV — hourly (export-consistent)
+### Heart rate, SpO2, HRV — hourly (confirmed)
 
 ```
 [0]       record count u8
@@ -141,7 +142,7 @@ if the ring's clock was never set; treat such records as undated.
 The ring stores nothing finer than hourly min/max/avg. The header's current
 reading is the only live value, so polling it is the way to get denser heart rate.
 
-### Activity — 10-minute buckets (export-consistent)
+### Activity — 10-minute buckets (confirmed)
 
 ```
 [0] count u8   [1..2] timezone offset i16 LE   [3..6] local-midnight epoch u32 LE
@@ -150,7 +151,7 @@ then 7-byte records: [slot u8][steps u16][active kcal u16][total kcal u16]
 
 Time = local midnight + slot × 600. Resting kcal = total − active.
 
-### Sleep (export-consistent)
+### Sleep (documented; consistent with our export, not yet seen on the wire)
 
 Type 1, a full night:
 
@@ -193,3 +194,33 @@ push) or `ring1MultiData` (multi-packet history batch). In our export every
 `ring1Notify` skin temperature row shares its timestamp with a sleep row, and in
 every `ring1Notify` sleep row total = REM + light + deep, as the layout predicts.
 The `stages` JSON uses the same run encoding as the wire format.
+
+## First capture, 2026-11-17
+
+nRF Connect on Android, connected to the ring while the Even app was also
+connected. The log holds one Even app sync (seen passively: only the ring's
+side is visible) followed by our own read-only frames.
+
+- Both CRCs, fragment reassembly (3-fragment activity batches) and the frame
+  header check out on every one of 54 frames.
+- Decoded values against the Even export taken an hour earlier: heart rate 210,
+  HRV 216, SpO2 213, steps 259 and calories 259 values match, **none differ**.
+  The only unmatched values are hours after the export was taken.
+- All of our requests except temperature were acked. pairAuth, deviceInfo and
+  deviceStatus returned the expected data.
+- The Even app's sync received **four days** per vital (three complete days plus
+  the current one), one push per day, and three days of activity. Those days were
+  already in the export, so the ring re-sends days it has synced before.
+- Our own requests three minutes later returned only the current day for heart
+  rate, SpO2 and HRV, and an ack with no data for activity and sleep.
+
+**Open after this capture:**
+
+- What decides whether a request returns the multi-day history or only the
+  current day: packetAck from the Even app, first request on a new connection,
+  or something else. Next test: Even app stopped, fresh connection, request each
+  metric without acknowledging, then acknowledge and request again.
+- Sleep has not been seen on the wire.
+- The ring also pushed a 121-byte system `0x11` frame containing its serial
+  numbers and what looks like calibration data, during the Even app's sync.
+  We ignore it.

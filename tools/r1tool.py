@@ -36,16 +36,25 @@ def cmd_frames(args: argparse.Namespace) -> int:
 
 
 def frames_in_log(lines):
-    """Yield (line_no, inner_frame_bytes) for every complete frame in a text log."""
+    """Yield (line_no, inner_frame_bytes) for every complete frame in a text log.
+
+    Logs often print each value more than once (nRF Connect does, three times
+    for writes), so a value identical to the previous one is skipped.
+    """
     reasm = p.Reassembler()
     pending = False
+    previous = None
     for no, line in enumerate(lines, 1):
         runs = HEX_RUN.findall(line)
         if not runs:
             continue
         raw = bytes.fromhex(re.sub(r"[-: ]", "", runs[-1]))
-        if raw[0] == 0 and not pending and p.crc32_ring(raw[5:]) != int.from_bytes(raw[1:5], "little"):
+        if raw == previous:
+            continue
+        starts_frame = len(raw) >= 17 and raw[5] == p.MARKER and raw[7] == p.MARKER
+        if not (starts_frame or pending):
             continue  # some other hex blob, not a ring frame
+        previous = raw
         try:
             inner = reasm.feed(raw)
         except ValueError as err:

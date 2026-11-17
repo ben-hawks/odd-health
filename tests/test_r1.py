@@ -89,8 +89,16 @@ class FramingTest(unittest.TestCase):
             "raw=" + raw.hex() + "\n",
         ]
         found = list(frames_in_log(log))
-        self.assertEqual([no for no, _ in found], [2, 3])
+        self.assertEqual([no for no, _ in found], [2])  # line 3 repeats line 2
         self.assertEqual(decode_frame(p.parse_inner(found[0][1])), {"battery_percent": 0x57})
+
+    def test_frames_in_log_dedupes_fragments(self):
+        notifications = ring_frame(2, 5, 1, p.STATUS_PUSH, 9, bytes(range(200)), chunk=60)
+        log = [f"{tag} value: (0x) " + "-".join(f"{b:02X}" for b in n) + "\n"
+               for n in notifications for tag in ("I", "A")]
+        found = list(frames_in_log(log))
+        self.assertEqual(len(found), 1)
+        self.assertEqual(p.parse_inner(found[0][1]).data, bytes(range(200)))
 
     def test_device_status_and_info(self):
         status = p.parse_inner(ring_frame(1, 0, 1, p.STATUS_ACK, 3, bytes([80, 2, 1, 0, 0, 0, 0]))[0][5:])

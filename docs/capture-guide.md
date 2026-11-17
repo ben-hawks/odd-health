@@ -21,7 +21,9 @@ This is the real test: can a client other than the Even app read the ring.
 2. Install **nRF Connect for Mobile**. Open it, find the ring under the bonded
    devices, connect.
 3. Request MTU 247 (connection menu → Request MTU).
-4. Open service `bae80001-…` and enable notifications on `bae80013` and `bae80011`.
+4. Open service `bae80001-…` and enable notifications on `bae80013` and
+   `bae80011`. If the icon already shows them as enabled, leave it alone:
+   tapping it again turns notifications off for the Even app too.
 5. On a computer run `python3 tools/r1tool.py frames`. It prints one hex frame
    per line.
 6. In nRF Connect write each frame to `bae80012`, in order, as a byte array,

@@ -4,8 +4,9 @@ Question: if our app holds the ring's connection to the phone, do ring gestures
 on the G2 glasses keep working?
 
 Short answer: the firmware evidence says yes. The ring talks to the glasses
-over its own Bluetooth link, separate from its link to the phone. None of this
-is tested on our hardware yet; the test is at the end.
+over its own Bluetooth link, separate from its link to the phone. Sharing the
+phone link with the Even app is confirmed on our ring; the gesture test at the
+end has not been run yet.
 
 Sources: ring firmware analysis in
 [evenRealities-openCFW](https://github.com/kalanihelekunihi/evenRealities-openCFW)
@@ -71,14 +72,22 @@ Two consequences for the design:
    app owns the sync the Even app's health history will have gaps (and the
    reverse).
 
-On Android, two apps can be connected to the same peripheral at once: the
-system shares one physical link, and notifications are delivered to every app
-that subscribed. That means the Even app cannot be locked out by "holding" the
-connection, and also that our app could listen to the Even app's syncs without
-sending anything. This is how the Android Bluetooth stack normally behaves, not
-something verified with this ring. hermes-g2 saw commands from both apps time
-out when both were sending, so the working assumption is: both may be
-connected, only one should be sending.
+### Sharing the phone link (confirmed 2026-11-17)
+
+On Android the Even app and a second app are connected to the ring at the same
+time over one physical link. In the first capture nRF Connect received the
+whole of an Even app sync without sending anything, and its own requests were
+answered while the Even app stayed connected. So:
+
+- The Even app cannot be locked out, and does not need to be.
+- Our app can collect data just by listening whenever the Even app syncs.
+- Our app can also ask for data itself. Short read requests did not collide
+  with the Even app in this capture; hermes-g2 saw timeouts when both apps
+  were sending at once, so keep our own traffic brief.
+- **The notification switch is shared too.** Turning notifications off on
+  `bae80013` from one app turns them off for the Even app as well; in the
+  capture this was followed by a connection timeout. Our app must only ever
+  enable notifications, never disable them.
 
 ## Storage on the ring
 
@@ -87,10 +96,11 @@ From the firmware analysis, relevant to how often we must sync:
 - The ring starts a sync by itself when a phone-role session is open and at
   least 3 hours have passed since the last one: heart rate, SpO2, HRV, activity,
   then unsynced sleep.
-- Offline queues: 144 activity buckets (24 hours of 10-minute data), 24 records
-  each for heart rate, SpO2 and HRV, 16 sleep records. Whether a heart-rate
-  "record" is an hour or a day is not clear from the notes; assume the ring
-  holds about one day and sync at least that often until measured.
+- Offline queues: 144 activity buckets, 24 records each for heart rate, SpO2
+  and HRV, 16 sleep records.
+- Measured on our ring: a sync returned three complete past days plus the
+  current day for heart rate, SpO2 and HRV, and three days of activity. So the
+  ring keeps at least three days.
 
 ## Test on real hardware
 

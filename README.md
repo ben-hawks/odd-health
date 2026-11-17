@@ -3,7 +3,9 @@
 Read health data from an Even Realities R1 ring over Bluetooth, without the
 Even app, and sync it to Health Connect on Android.
 
-Status: protocol notes and an offline decoder. Nothing has talked to a ring yet.
+Status: protocol confirmed on a real ring (firmware 2.3.2.0008) with nRF Connect;
+heart rate, HRV, SpO2, steps and calories decode to exactly the values in the
+Even app's export. Sleep is not yet verified. No Android app yet.
 
 ## Layout
 
@@ -36,9 +38,9 @@ Status: protocol notes and an offline decoder. Nothing has talked to a ring yet.
    | sleep with stages | `SleepSessionRecord` |
    | nightly skin temperature | `SkinTemperatureRecord` |
 
-The main constraint: the ring runs one phone session at a time, so this app and
-the Even app should not both be sending it commands. The ring's link to the
-glasses is separate, so gestures should be unaffected; see
+This app and the Even app share the ring's phone link, and both receive
+everything the ring sends. The ring's link to the glasses is separate, so
+gestures should be unaffected; see
 [docs/ring-and-glasses.md](docs/ring-and-glasses.md).
 
 ## Credits
