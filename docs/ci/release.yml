@@ -32,12 +32,10 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # GitHub's Ubuntu runners come with the Android SDK; add what the build needs.
-      - name: Android SDK packages
-        run: |
-          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -1)
-          yes | "$SDKMANAGER" --licenses > /dev/null || true
-          "$SDKMANAGER" "platforms;android-37.0" "build-tools;36.0.0" "platform-tools"
+      # v4: v3 also requested the removed 'tools' package and failed.
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools platforms;android-37.0 build-tools;36.0.0
 
       - uses: gradle/actions/setup-gradle@v4
 
