@@ -5,6 +5,8 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+## 0.15.0
+
 - App updates: check GitHub releases, download, verify the checksum and
   install, from Sync → App updates. Optional daily check with a notification
   (on by default). Adds the internet and install-apps permissions; network use
