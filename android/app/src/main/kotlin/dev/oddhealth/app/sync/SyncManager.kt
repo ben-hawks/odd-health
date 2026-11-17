@@ -46,6 +46,10 @@ class SyncManager(
     private val _writable = MutableStateFlow<Set<RecordKind>>(emptySet())
     val writable: StateFlow<Set<RecordKind>> = _writable.asStateFlow()
 
+    /** Ledger scope per writable kind; see [SyncTarget.ledgerScope]. */
+    private val _scopes = MutableStateFlow<Map<RecordKind, String>>(emptyMap())
+    val scopes: StateFlow<Map<RecordKind, String>> = _scopes.asStateFlow()
+
     private val _skinSupported = MutableStateFlow(true)
     val skinSupported: StateFlow<Boolean> = _skinSupported.asStateFlow()
 
@@ -59,6 +63,7 @@ class SyncManager(
                 val kinds = healthConnect.writableKinds()
                 _writable.value = kinds
                 _skinSupported.value = healthConnect.skinSupported
+                _scopes.value = kinds.associateWith(healthConnect::ledgerScope)
                 if (kinds.isEmpty()) HealthConnectState.NEEDS_PERMISSION else HealthConnectState.READY
             }
             HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectState.NOT_INSTALLED

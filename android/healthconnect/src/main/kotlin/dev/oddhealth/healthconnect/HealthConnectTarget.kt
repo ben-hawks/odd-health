@@ -76,6 +76,24 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
         }
     }
 
+    /** Health Connect types actually written for [kind] with the current permissions. */
+    private fun writtenTypes(kind: RecordKind): List<KClass<out Record>> =
+        HealthConnectMapping.recordTypes(kind).filter {
+            canWrite(it) && (it != SkinTemperatureRecord::class || skinSupported)
+        }
+
+    /**
+     * Unchanged kinds keep the plain target id. A kind whose mapping was revised,
+     * or that is written with only some of its types, gets a scope naming what
+     * is written, so it is sent again when that changes.
+     */
+    override fun ledgerScope(kind: RecordKind): String {
+        val types = writtenTypes(kind)
+        val revision = HealthConnectMapping.revision(kind)
+        if (revision == 1 && types.size == HealthConnectMapping.recordTypes(kind).size) return id
+        return "$id:${kind.id}:r$revision:" + types.joinToString("+") { it.simpleName.orEmpty() }
+    }
+
     override suspend fun write(records: List<HealthRecord>, context: SyncContext): WriteResult {
         val c = client ?: return WriteResult(emptyList(), failed = records.associateWith { "Health Connect not available" })
         var history: List<SkinTemperature>? = null
@@ -246,6 +264,15 @@ object HealthConnectMapping {
         RecordKind.SLEEP_SESSION -> listOf(SleepSessionRecord::class)
         RecordKind.SKIN_TEMPERATURE -> listOf(SkinTemperatureRecord::class, BodyTemperatureRecord::class)
         RecordKind.RESTING_HEART_RATE -> listOf(RestingHeartRateRecord::class)
+    }
+
+    /**
+     * Bump when what a kind is written as changes, so stored records are sent
+     * again. 2: nightly temperature also written as body temperature.
+     */
+    fun revision(kind: RecordKind): Int = when (kind) {
+        RecordKind.SKIN_TEMPERATURE -> 2
+        else -> 1
     }
 
     /** Every write permission the app can ask for. */

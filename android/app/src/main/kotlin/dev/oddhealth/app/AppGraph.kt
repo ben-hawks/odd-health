@@ -30,7 +30,9 @@ class OddHealthApp : Application() {
         super.onCreate()
         graph = AppGraph(this)
         graph.scope.launch {
-            if (graph.repository.backfillRestingHeartRate() > 0) graph.sync.syncSoon(5_000)
+            graph.repository.backfillRestingHeartRate()
+            // Catch up on anything unsynced, including kinds whose mapping changed in an update.
+            graph.sync.syncSoon(5_000)
         }
     }
 }

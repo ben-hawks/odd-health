@@ -130,6 +130,37 @@ class CoreTest {
     }
 
     @Test
+    fun changingALedgerScopeResendsThatKindOnly() = runTest {
+        val hr = HourlyVital(RecordKind.HEART_RATE_HOUR, Instant.ofEpochSecond(0), cst, 60, 70, 80, DataSource.RING, 1)
+        val skin = SkinTemperature(Instant.ofEpochSecond(0), Instant.ofEpochSecond(3600), cst, 35.0, DataSource.RING, 1)
+        val synced = HashSet<Pair<String, String>>()
+        val ledger = object : SyncLedger {
+            override suspend fun pending(targetId: String, kinds: Set<RecordKind>, limit: Int) =
+                listOf(hr, skin).filter { it.kind in kinds && (targetId to it.key) !in synced }
+            override suspend fun markSynced(targetId: String, records: List<HealthRecord>) {
+                records.forEach { synced += targetId to it.key }
+            }
+        }
+        var skinScope = "t"
+        val target = object : SyncTarget {
+            val got = ArrayList<HealthRecord>()
+            override val id = "t"
+            override val displayName = "T"
+            override suspend fun writableKinds() = setOf(RecordKind.HEART_RATE_HOUR, RecordKind.SKIN_TEMPERATURE)
+            override fun ledgerScope(kind: RecordKind) = if (kind == RecordKind.SKIN_TEMPERATURE) skinScope else id
+            override suspend fun write(records: List<HealthRecord>, context: SyncContext) = WriteResult(records.also { got += it })
+        }
+        val context = object : SyncContext {
+            override suspend fun history(kind: RecordKind, limit: Int) = emptyList<HealthRecord>()
+        }
+        val engine = SyncEngine(ledger, context)
+        engine.sync(target)
+        skinScope = "t:skin:r2"
+        engine.sync(target)
+        assertEquals(listOf(RecordKind.HEART_RATE_HOUR, RecordKind.SKIN_TEMPERATURE, RecordKind.SKIN_TEMPERATURE), target.got.map { it.kind })
+    }
+
+    @Test
     fun syncEngineMovesPastRecordsThatFail() = runTest {
         val records = (0 until 5).map {
             HourlyVital(RecordKind.HEART_RATE_HOUR, Instant.ofEpochSecond(it * 3600L), cst, 60, 70, 80, DataSource.RING, 1)

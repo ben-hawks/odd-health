@@ -98,9 +98,9 @@ interface RecordDao {
 
     @Query(
         """SELECT s.* FROM synced s JOIN records r ON r.key = s.key
-           WHERE s.target = :target AND r.start >= :from AND r.start < :to""",
+           WHERE s.target IN (:targets) AND r.start >= :from AND r.start < :to""",
     )
-    fun syncedIn(target: String, from: Long, to: Long): Flow<List<SyncedRow>>
+    fun syncedIn(targets: List<String>, from: Long, to: Long): Flow<List<SyncedRow>>
 
     @Query("SELECT kind, COUNT(*) AS n FROM records GROUP BY kind")
     fun counts(): Flow<List<KindCount>>

@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -52,7 +53,6 @@ import java.time.ZoneId
 class AppViewModel(app: Application) : AndroidViewModel(app) {
     private val graph = app.graph
     private val repo = graph.repository
-    private val target = graph.sync.healthConnect.id
 
     /** Ticks every minute so "x min ago" and the current day stay current. */
     val now: StateFlow<Instant> = flow {
@@ -104,7 +104,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val syncStatus: Flow<SyncStatus> = combine(
         graph.sync.state, graph.settings.lastSync,
-        graph.sync.writable.flatMapLatest { kinds -> if (kinds.isEmpty()) flow { emit(0) } else repo.pendingCount(target, kinds) },
+        graph.sync.scopes.flatMapLatest { scopes ->
+            val counts = scopes.entries.groupBy({ it.value }, { it.key }).map { (scope, kinds) -> repo.pendingCount(scope, kinds.toSet()) }
+            if (counts.isEmpty()) flowOf(0) else combine(counts) { it.sum() }
+        },
     ) { state, last, pending -> SyncStatus(state, last, pending) }
 
     private fun day(date: LocalDate): Flow<DayData> {
@@ -112,7 +115,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val from = date.atStartOfDay(zone).toInstant().minus(Duration.ofHours(18))
         val to = date.plusDays(1).atStartOfDay(zone).toInstant()
         return combine(
-            repo.range(from, to), repo.syncedIn(target, from, to), graph.sync.writable,
+            repo.range(from, to), graph.sync.scopes.flatMapLatest { repo.syncedIn(it, from, to) }, graph.sync.writable,
             repo.byKind(RecordKind.SKIN_TEMPERATURE),
         ) { records, synced, writable, skins ->
             DayData(date, zone, records, synced, writable, skins.filterIsInstance<SkinTemperature>())

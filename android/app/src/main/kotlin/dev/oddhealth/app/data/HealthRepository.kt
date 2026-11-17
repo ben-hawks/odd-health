@@ -64,9 +64,14 @@ class HealthRepository(private val dao: RecordDao) : SyncLedger, SyncContext {
 
     fun byKind(kind: RecordKind): Flow<List<HealthRecord>> = dao.byKind(kind.id).map { rows -> rows.map(RecordCodec::fromRow) }
 
-    /** Versions synced to [target] for records starting in the range, by key. */
-    fun syncedIn(target: String, from: Instant, to: Instant): Flow<Map<String, Long>> =
-        dao.syncedIn(target, from.epochSecond, to.epochSecond).map { rows -> rows.associate { it.key to it.version } }
+    /**
+     * Synced versions, by key, for records starting in the range. [scopes] gives
+     * the ledger scope each kind is tracked under.
+     */
+    fun syncedIn(scopes: Map<RecordKind, String>, from: Instant, to: Instant): Flow<Map<String, Long>> =
+        dao.syncedIn(scopes.values.distinct(), from.epochSecond, to.epochSecond).map { rows ->
+            rows.filter { scopes[RecordKind.fromId(it.key.substringBefore(':'))] == it.target }.associate { it.key to it.version }
+        }
 
     fun pendingCount(target: String, kinds: Set<RecordKind>): Flow<Int> =
         dao.pendingCount(target, kinds.map { it.id })
