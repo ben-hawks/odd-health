@@ -224,3 +224,24 @@ side is visible) followed by our own read-only frames.
 - The ring also pushed a 121-byte system `0x11` frame containing its serial
   numbers and what looks like calibration data, during the Even app's sync.
   We ignore it.
+
+## Second capture, 2026-11-17 (listener app 0.1)
+
+- Decoded values again match the export with no differences.
+- A request from our app returned the full history: four days each of heart
+  rate, SpO2, HRV and activity. So the history is not reserved for the Even app.
+- After that the app acknowledged all 16 pushes with packetAck. Every later
+  request, ours and the Even app's, returned only the current day. Still two
+  explanations: acknowledged days are not re-sent, or only the first request
+  on a connection gets the history. Test: with acknowledging off, request
+  twice on one connection.
+- **Status 11.** While the Even app was pulling a large non-health transfer,
+  the ring answered each of our health requests with a frame of status 11 and
+  no data instead of an ack. Treat it as "busy, ask again later".
+- **Other traffic on `bae80013`.** The same fragment transport also carries
+  inner frames that do not start with `0x64`: a 10-byte header, a 1-byte reply
+  and about 4 KB transfers in 18 fragments whose content looks like ring
+  firmware logs. The Even app requests these after it starts. The large ones
+  fail our CRC-32 check; we skip them.
+- System sub-command `0x84` exists (seen as an ack to the Even app); unknown.
+- Sleep still not seen: both sleep requests were acked with no data.

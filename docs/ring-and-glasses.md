@@ -85,9 +85,19 @@ answered while the Even app stayed connected. So:
   with the Even app in this capture; hermes-g2 saw timeouts when both apps
   were sending at once, so keep our own traffic brief.
 - **The notification switch is shared too.** Turning notifications off on
-  `bae80013` from one app turns them off for the Even app as well; in the
-  capture this was followed by a connection timeout. Our app must only ever
-  enable notifications, never disable them.
+  `bae80013` from one app turns them off for the Even app as well. Our app must
+  never disable them.
+- **Do not write the `bae80011` subscription.** Three times out of three
+  patterns, writing it on a link the Even app had already opened as the phone
+  was followed by the link dropping six seconds later (once from nRF Connect,
+  then about twenty times in a row from listener 0.1, which re-wrote it on every
+  reconnect and so kept the ring in a reconnect loop). The one time the write
+  came before the Even app's pairAuth, the link stayed up. `bae80010`/`bae80011`
+  is the channel the glasses use, and the firmware notes say subscription
+  events on the service drive glasses-role assignment, so the likely cause is
+  the ring treating the phone link as a glasses link. This is an inference from
+  timing, not proven. From 0.2 the app leaves `bae80011` alone, and only writes
+  the `bae80013` subscription if the ring reports it off.
 
 ## Storage on the ring
 

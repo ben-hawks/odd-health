@@ -133,7 +133,7 @@ class Frame(
                 module == R1.MODULE_SYSTEM && cmd == 0 -> R1.SYSTEM_SUBCMDS[subCmd] ?: "0x%02x".format(subCmd)
                 else -> "0x%02x/0x%02x".format(cmd, subCmd)
             }
-            return "$mod/$what ${R1.STATUSES[status] ?: status.toString()}"
+            return "$mod/$what ${R1.STATUSES[status] ?: "status $status"}"
         }
 }
 
@@ -213,7 +213,11 @@ class Reassembler {
         parts.clear()
     }
 
-    fun feed(notification: ByteArray): ByteArray? {
+    /** A reassembled batch. crcOk is false if a fragment was lost or the data is not a health frame. */
+    class Batch(val inner: ByteArray, val crcOk: Boolean)
+
+    /** Like [feed] but reports a failed checksum instead of throwing. */
+    fun feedLenient(notification: ByteArray): Batch? {
         require(notification.size >= 5) { "fragment too short" }
         val index = notification.u8(0)
         val id = notification.u32(1).toInt()
@@ -231,7 +235,12 @@ class Reassembler {
             part.copyInto(inner, off)
             off += part.size
         }
-        require(crc32Ring(inner) == id) { "batch %08x: CRC mismatch (missing fragment?)".format(id) }
-        return inner
+        return Batch(inner, crc32Ring(inner) == id)
+    }
+
+    fun feed(notification: ByteArray): ByteArray? {
+        val result = feedLenient(notification) ?: return null
+        require(result.crcOk) { "batch CRC mismatch (missing fragment?)" }
+        return result.inner
     }
 }

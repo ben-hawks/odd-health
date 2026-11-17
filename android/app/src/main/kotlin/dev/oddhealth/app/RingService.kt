@@ -39,6 +39,9 @@ import java.util.UUID
  * acknowledge health data.
  *
  * It never turns notifications off: that setting is shared with the Even app.
+ * It also never writes to the bae80011 subscription. Doing so on the phone's
+ * link was followed by the link dropping about six seconds later, every time
+ * (bae80010/11 is the channel the glasses use).
  */
 @SuppressLint("MissingPermission") // MainActivity starts this only after BLUETOOTH_CONNECT is granted.
 class RingService : Service() {
@@ -57,6 +60,7 @@ class RingService : Service() {
         private const val WRITE_GAP_MS = 250L
         private const val OP_TIMEOUT_MS = 3000L
         private const val SETUP_FALLBACK_MS = 4000L
+        private const val OTHER_REPORT_MS = 2000L
         private val CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         private val SERVICE = UUID.fromString(R1.SERVICE_UUID)
         private val WRITE = UUID.fromString(R1.WRITE_CHAR_UUID)
@@ -71,6 +75,15 @@ class RingService : Service() {
     private var ready = false
     private var acknowledge = false
     private var frames = 0
+    private var discovering = false
+    private var dataSubscribed: Boolean? = null // what the ring reports for bae80013; null = unknown
+    private var otherBatches = 0
+    private var otherBytes = 0
+    private val reportOther = Runnable {
+        event("Other data from the ring (not health): $otherBatches transfers, $otherBytes bytes")
+        otherBatches = 0
+        otherBytes = 0
+    }
 
     // Sequence numbers for our own frames, kept away from the Even app's low numbers.
     private var seq = 0x4F00
@@ -89,6 +102,7 @@ class RingService : Service() {
             NotificationChannel(CHANNEL, "Ring connection", NotificationManager.IMPORTANCE_LOW),
         )
         startForeground(NOTIFICATION_ID, notification("Starting"), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        event("Odd Health ${packageManager.getPackageInfo(packageName, 0).versionName} started")
         connect()
     }
 
@@ -134,6 +148,8 @@ class RingService : Service() {
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             ready = false
+            discovering = false
+            dataSubscribed = null
             writeChar = null
             ops.clear()
             opRunning = false
@@ -142,9 +158,9 @@ class RingService : Service() {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
                 event("Connected")
                 setStatus("Connected, setting up")
-                if (!g.requestMtu(MTU)) g.discoverServices()
+                if (!g.requestMtu(MTU)) discover(g)
                 // If the MTU callback never comes, carry on without it.
-                main.postDelayed({ if (gatt === g && writeChar == null) g.discoverServices() }, SETUP_FALLBACK_MS)
+                main.postDelayed({ if (gatt === g) discover(g) }, SETUP_FALLBACK_MS)
             } else {
                 event("Disconnected (status $status)")
                 setStatus("Waiting for ring")
@@ -153,7 +169,7 @@ class RingService : Service() {
 
         override fun onMtuChanged(g: BluetoothGatt, mtu: Int, status: Int) {
             event("MTU $mtu")
-            g.discoverServices()
+            discover(g)
         }
 
         override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
@@ -163,17 +179,49 @@ class RingService : Service() {
                 return
             }
             writeChar = service.getCharacteristic(WRITE)
-            for (uuid in listOf(NOTIFY, STATUS_NOTIFY)) {
-                val ch = service.getCharacteristic(uuid) ?: continue
-                g.setCharacteristicNotification(ch, true)
-                val cccd = ch.getDescriptor(CCCD) ?: continue
-                enqueue("subscribe ${shortName(uuid)}") { writeDescriptor(it, cccd) }
+            // Register locally for both channels. This costs nothing on the air.
+            service.getCharacteristic(STATUS_NOTIFY)?.let { g.setCharacteristicNotification(it, true) }
+            val data = service.getCharacteristic(NOTIFY)
+            val cccd = data?.getDescriptor(CCCD)
+            if (data == null || cccd == null) {
+                setStatus("Ring data channel not found")
+                return
+            }
+            g.setCharacteristicNotification(data, true)
+            // Only write the subscription if the ring says it is off; the Even
+            // app normally has it on already and the setting is shared.
+            enqueue("check subscription") { it.readDescriptor(cccd) }
+            enqueue("subscribe") {
+                if (dataSubscribed == true) {
+                    event("Ring notifications already on")
+                    false
+                } else {
+                    event("Turning ring notifications on")
+                    writeDescriptor(it, cccd)
+                }
             }
             enqueue("ready") {
                 ready = true
                 event("Listening")
                 setStatus("Listening")
                 false // nothing was sent; move on immediately
+            }
+        }
+
+        override fun onDescriptorRead(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int, value: ByteArray) {
+            if (status == BluetoothGatt.GATT_SUCCESS) dataSubscribed = value.isNotEmpty() && value[0].toInt() and 1 != 0
+            opDone()
+        }
+
+        @Deprecated("Called instead of the four-argument version before Android 13")
+        @Suppress("DEPRECATION")
+        override fun onDescriptorRead(g: BluetoothGatt, d: BluetoothGattDescriptor, status: Int) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                val value = d.value
+                if (status == BluetoothGatt.GATT_SUCCESS && value != null) {
+                    dataSubscribed = value.isNotEmpty() && value[0].toInt() and 1 != 0
+                }
+                opDone()
             }
         }
 
@@ -191,13 +239,29 @@ class RingService : Service() {
         }
     }
 
+    /** Service discovery, once per connection (the MTU callback can arrive more than once). */
+    private fun discover(g: BluetoothGatt) {
+        if (discovering) return
+        discovering = true
+        g.discoverServices()
+    }
+
     // --- incoming ------------------------------------------------------------
 
     private fun received(uuid: UUID, value: ByteArray) {
         RingLog.raw(this, "N", shortName(uuid), value.toHex())
         if (uuid != NOTIFY) return
         try {
-            val inner = reassembler.feed(value) ?: return
+            val batch = reassembler.feedLenient(value) ?: return
+            val inner = batch.inner
+            if (!batch.crcOk || inner.size < R1.HEADER_LEN || inner[0].toInt() != R1.MARKER) {
+                // The Even app also pulls other things over this channel (ring logs, for one).
+                otherBatches++
+                otherBytes += inner.size
+                main.removeCallbacks(reportOther)
+                main.postDelayed(reportOther, OTHER_REPORT_MS)
+                return
+            }
             val frame = parseInner(inner)
             frames++
             val decoded = decode(frame)
