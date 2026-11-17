@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Version from tag
         id: version
@@ -27,7 +27,7 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
@@ -37,7 +37,10 @@ jobs:
         with:
           packages: platform-tools platforms;android-37.0 build-tools;36.0.0
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          # The fully open-source cache (a wrapper over actions/cache), free for any repository.
+          cache-provider: basic
 
       - name: Tests
         run: |
