@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
@@ -41,6 +42,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -188,6 +190,33 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun requestData() = RingService.requestData(getApplication())
+
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing
+
+    /**
+     * Pull to refresh: ask the ring for data (if connected), give it a few
+     * seconds to arrive, then sync to Health Connect.
+     */
+    fun refresh() = viewModelScope.launch {
+        if (_refreshing.value) return@launch
+        _refreshing.value = true
+        try {
+            if (graph.ring.status.value.connected) {
+                val before = graph.ring.status.value.lastData
+                RingService.requestData(getApplication())
+                // Wait for the first data, then a moment for the rest of the batch.
+                withTimeoutOrNull(10_000) { graph.ring.status.first { it.lastData != before } }
+                delay(2_500)
+            }
+            if (graph.sync.state.value == HealthConnectState.READY) {
+                val failed = graph.sync.syncNow().filterIsInstance<SyncOutcome.Skipped>()
+                if (failed.isNotEmpty()) messages.send(getApplication<Application>().getString(R.string.sync_failed, failed.first().reason))
+            }
+        } finally {
+            _refreshing.value = false
+        }
+    }
 
     fun setStayConnected(on: Boolean) {
         graph.settings.setStayConnected(on)

@@ -57,6 +57,7 @@ private enum class Tab(val dest: Dest, val label: Int, val selected: ImageVector
 class AppActions(
     val requestData: () -> Unit = {},
     val setListening: (Boolean) -> Unit = {},
+    val refresh: () -> Unit = {},
     val setHrPoll: (Int) -> Unit = {},
     val syncNow: () -> Unit = {},
     val permissions: () -> Unit = {},
@@ -76,6 +77,7 @@ fun AppShell(
     now: Instant,
     actions: AppActions,
     importing: Boolean = false,
+    refreshing: Boolean = false,
     start: Dest = Dest.Today,
 ) {
     // One back stack: a tab root, optionally with screens on top.
@@ -109,14 +111,18 @@ fun AppShell(
                             onOpen = { m -> backStack.add(Dest.Detail(m)) },
                             onRing = { goTo(Dest.Ring) },
                             onSync = { goTo(Dest.Sync) },
+                            refreshing = refreshing,
+                            onRefresh = actions.refresh,
                         )
                     }
                 }
                 entry<Dest.Ring> {
-                    ring?.let { RingScreen(it, now, actions.requestData, actions.setListening, actions.setHrPoll, onDebug = { backStack.add(Dest.Debug) }) }
+                    ring?.let { RingScreen(it, now, actions.requestData, actions.setListening, actions.setHrPoll, onDebug = { backStack.add(Dest.Debug) },
+                        refreshing = refreshing, onRefresh = actions.refresh) }
                 }
                 entry<Dest.Sync> {
-                    sync?.let { SyncScreen(it, now, actions.syncNow, actions.permissions, actions.importExport, importing) }
+                    sync?.let { SyncScreen(it, now, actions.syncNow, actions.permissions, actions.importExport, importing,
+                        refreshing = refreshing, onRefresh = actions.refresh) }
                 }
                 entry<Dest.Debug> {
                     debug?.let {

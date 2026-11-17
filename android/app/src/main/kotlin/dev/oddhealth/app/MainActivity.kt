@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
                 val debug by vm.debug.collectAsStateWithLifecycle()
                 val now by vm.now.collectAsStateWithLifecycle()
                 val importing by vm.importing.collectAsStateWithLifecycle()
+                val refreshing by vm.refreshing.collectAsStateWithLifecycle()
 
                 val btPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
                     if (graph.settings.stayConnected.value) RingService.start(this)
@@ -69,10 +70,11 @@ class MainActivity : ComponentActivity() {
 
                 AppShell(
                     today = today, ring = ring, sync = sync, debug = debug,
-                    detail = vm::detail, now = now, importing = importing, start = start,
+                    detail = vm::detail, now = now, importing = importing, refreshing = refreshing, start = start,
                     actions = AppActions(
                         requestData = vm::requestData,
                         setListening = vm::setStayConnected,
+                        refresh = { vm.refresh() },
                         setHrPoll = vm::setHrPollMinutes,
                         syncNow = { vm.syncNow() },
                         // Launched directly from the tap, as Android 14+ requires.

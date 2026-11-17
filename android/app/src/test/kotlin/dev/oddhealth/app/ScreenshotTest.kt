@@ -52,6 +52,13 @@ class ScreenshotTest {
     @Config(qualifiers = "w412dp-h1900dp-xxhdpi")
     @Test fun todayFull() = shot("1b-today-full") { shell() }
 
+    @Test fun todayRefreshing() = shot("1c-today-refreshing") {
+        AppShell(
+            SampleData.today, SampleData.ringScreen, SampleData.syncScreen, DebugState(false, 0, 0),
+            detail = { _, _ -> flowOf(SampleData.heartRateDetail) }, now = now, actions = AppActions(), refreshing = true,
+        )
+    }
+
     @Test fun todayDark() = shot("2-today-dark", dark = true) { shell() }
 
     @Test fun heartRate() = shot("3-heart-rate") { MetricDetailScreen(SampleData.heartRateDetail, {}, {}, null) }
