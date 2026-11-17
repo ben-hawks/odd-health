@@ -100,6 +100,14 @@ class FramingTest(unittest.TestCase):
         self.assertEqual(len(found), 1)
         self.assertEqual(p.parse_inner(found[0][1]).data, bytes(range(200)))
 
+    def test_frames_in_log_reads_app_capture_format(self):
+        raw = ring_frame(1, 0, 1, p.STATUS_ACK, 3, b"\x57")[0]
+        log = [
+            "# 2026-11-17T00:27:05.246-06:00 system/deviceStatus ack #3 — battery 87%\n",
+            f"2026-11-17T00:27:05.246-06:00\tN\tbae80013\t{raw.hex()}\n",
+        ]
+        self.assertEqual([no for no, _ in frames_in_log(log)], [2])
+
     def test_device_status_and_info(self):
         status = p.parse_inner(ring_frame(1, 0, 1, p.STATUS_ACK, 3, bytes([80, 2, 1, 0, 0, 0, 0]))[0][5:])
         self.assertEqual(decode_frame(status), {"battery_percent": 80, "charge_state": "not_charging"})

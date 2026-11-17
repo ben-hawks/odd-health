@@ -45,6 +45,8 @@ def frames_in_log(lines):
     pending = False
     previous = None
     for no, line in enumerate(lines, 1):
+        if line.startswith("#"):
+            continue
         runs = HEX_RUN.findall(line)
         if not runs:
             continue
