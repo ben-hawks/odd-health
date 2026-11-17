@@ -13,4 +13,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "odd-health"
-include(":protocol", ":app")
+include(":protocol", ":core", ":healthconnect", ":app")

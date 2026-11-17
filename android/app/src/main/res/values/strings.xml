@@ -1,4 +1,77 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Odd Health</string>
+
+    <string name="today">Today</string>
+    <string name="sync">Sync</string>
+    <string name="back">Back</string>
+    <string name="values">Values</string>
+
+    <string name="sleep">Sleep</string>
+    <string name="heart_rate">Heart rate</string>
+    <string name="hrv">HRV</string>
+    <string name="spo2">Blood oxygen</string>
+    <string name="activity">Activity</string>
+    <string name="skin_temperature">Skin temperature</string>
+
+    <string name="unit_bpm">bpm</string>
+    <string name="unit_ms">ms</string>
+    <string name="unit_steps">steps</string>
+    <string name="range_today">%1$d–%2$d today</string>
+    <string name="kcal_line">%1$d kcal · %2$d active</string>
+    <string name="vs_baseline">%1$s °C vs your baseline</string>
+    <string name="baseline_pending">Baseline after 3 nights</string>
+    <string name="efficiency_short">%1$d%% efficiency</string>
+    <string name="score">score</string>
+
+    <string name="stage_deep">Deep</string>
+    <string name="stage_light">Light</string>
+    <string name="stage_rem">REM</string>
+    <string name="stage_awake">Awake</string>
+
+    <string name="chart_hourly_range">Hourly minimum, average and maximum</string>
+    <string name="chart_steps_by_hour">Steps per hour</string>
+    <string name="chart_hypnogram">Sleep stages through the night</string>
+
+    <string name="previous_day">Previous day</string>
+    <string name="next_day">Next day</string>
+
+    <string name="mark_synced">In Health Connect</string>
+    <string name="mark_pending">Waiting to sync</string>
+    <string name="mark_app_only">This app only</string>
+
+    <string name="status_ring">Ring</string>
+    <string name="ring_connected">Connected</string>
+    <string name="ring_connected_worn">Connected · on your finger</string>
+    <string name="ring_not_connected">Not connected</string>
+    <string name="ring_battery">%1$d%% battery</string>
+    <string name="battery">Battery</string>
+    <string name="battery_charging">%1$d%% · charging</string>
+    <string name="request_data">Request data</string>
+    <string name="share_log">Share log</string>
+    <string name="listen_title">Stay connected</string>
+    <string name="listen_body">Keeps a shared connection open alongside the Even app, so every sync is captured</string>
+    <string name="firmware">Firmware</string>
+    <string name="last_data">Last data</string>
+    <string name="ago">%1$s ago</string>
+    <string name="recent_activity">Recent activity</string>
+
+    <string name="health_connect">Health Connect</string>
+    <string name="hc_synced_ago">Synced %1$s ago</string>
+    <string name="hc_pending">%1$d waiting</string>
+    <string name="hc_not_synced">Not synced yet</string>
+    <string name="hc_action_needed">Needs attention</string>
+    <string name="hc_needs_permission">Allow access to start syncing</string>
+    <string name="hc_not_installed">Health Connect isn\'t installed</string>
+    <string name="hc_unsupported">Not available on this phone</string>
+    <string name="sync_now">Sync now</string>
+    <string name="permissions">Permissions</string>
+    <string name="what_is_synced">What goes to Health Connect</string>
+    <string name="as_type">As %1$s</string>
+    <string name="shown_in_app_only">Shown in this app only</string>
+    <string name="stored_on_phone">Stored on this phone</string>
+    <string name="records_stored">%1$s records</string>
+    <string name="since">Since %1$s</string>
+    <string name="import_body">Import an export from the Even app to bring in older history.</string>
+    <string name="import_export">Import Even export</string>
 </resources>
