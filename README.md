@@ -5,7 +5,7 @@ Even app, and sync it to Health Connect on Android.
 
 Status: protocol confirmed on a real ring (firmware 2.3.2.0008) with nRF Connect;
 heart rate, HRV, SpO2, steps and calories decode to exactly the values in the
-Even app's export. Sleep is not yet verified. The Android app listens and
+Even app's export, and sleep decodes consistently. The Android app listens and
 records; it does not store history or write to Health Connect yet.
 
 ## Layout

@@ -108,6 +108,12 @@ class FramingTest(unittest.TestCase):
         ]
         self.assertEqual([no for no, _ in frames_in_log(log)], [2])
 
+    def test_heartbeat_and_wear(self):
+        beat = p.parse_inner(ring_frame(1, 0, 0x7F, p.STATUS_PUSH, 59, bytes.fromhex("22020100000000"))[0][5:])
+        self.assertEqual(decode_frame(beat), {"battery_percent": 34, "charge_state": "not_charging"})
+        wear = p.parse_inner(ring_frame(1, 0, 0x03, p.STATUS_PUSH, 45, b"\x02")[0][5:])
+        self.assertEqual(decode_frame(wear), {"wear_state": 2})
+
     def test_device_status_and_info(self):
         status = p.parse_inner(ring_frame(1, 0, 1, p.STATUS_ACK, 3, bytes([80, 2, 1, 0, 0, 0, 0]))[0][5:])
         self.assertEqual(decode_frame(status), {"battery_percent": 80, "charge_state": "not_charging"})

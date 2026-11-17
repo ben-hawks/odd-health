@@ -8,6 +8,7 @@ import dev.oddhealth.r1.R1
 import dev.oddhealth.r1.Sleep
 import dev.oddhealth.r1.SleepInterval
 import dev.oddhealth.r1.Vitals
+import dev.oddhealth.r1.WearStatus
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -52,5 +53,6 @@ fun describe(decoded: Decoded): String = when (decoded) {
         }
         "battery ${decoded.batteryPercent}%$state"
     }
+    is WearStatus -> "wear state ${decoded.state}"
     is DeviceInfo -> "firmware ${decoded.firmware}" + (decoded.hardware?.let { ", hardware $it" } ?: "")
 }

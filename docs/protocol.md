@@ -151,7 +151,7 @@ then 7-byte records: [slot u8][steps u16][active kcal u16][total kcal u16]
 
 Time = local midnight + slot × 600. Resting kcal = total − active.
 
-### Sleep (documented; consistent with our export, not yet seen on the wire)
+### Sleep (confirmed)
 
 Type 1, a full night:
 
@@ -259,3 +259,40 @@ side is visible) followed by our own read-only frames.
   nothing reached us on `bae80011` (which we no longer subscribe to).
 - The ring pushed system `wearStatus` (0x03) by itself, one data byte, value 2.
   Meaning of the value not yet known.
+
+## Overnight capture, 2026-11-17 (listener app 0.2)
+
+The app stayed connected from 01:05 to 05:38 with no drops, alongside the Even
+app's own background connection. The one disconnect came when the Even app was
+opened and reconnected.
+
+**Sleep, confirmed on the wire.** One type-1 record, pushed during the Even
+app's sync at 05:35, eight minutes after the end time it carries. Every
+consistency check holds: asleep = REM + light + deep, end − start = asleep +
+awake, each stage's runs sum to its total, the four share bytes sum to 100.
+Hourly syncs before waking got only an ack for sleep, so the ring hands over a
+night only once it has ended.
+
+**Acknowledged data is consumed.** The Even app synced in the background at
+:07 every hour. Each sync returned only the hours from the last synced hour
+onwards (01:07 → hour 1, 02:07 → hours 1–2, 03:07 → hours 2–3 …), with the
+current, unfinished hour re-sent each time. So the ring keeps a cursor that
+packetAck advances; unacknowledged days stay available to the next request.
+For us this means:
+
+- never acknowledge, so the Even app's history is unaffected;
+- store records by metric and timestamp and let a later value for the same
+  hour replace an earlier one.
+
+**Other periodic traffic** (all seen passively, sent by the Even app or the ring):
+
+| What | When |
+|---|---|
+| deviceStatus request (battery) | Even app, every 15 minutes |
+| health sync, all five metrics | Even app, hourly at :07 |
+| heartbeatPack (0x7F) push, 7 bytes | ring, hourly; same layout as deviceStatus |
+| wearStatus (0x03) push, 1 byte | ring, on change: 3 at 03:34:49, back to 2 at 03:35:27 |
+| ~90 KB of non-health transfers | Even app, once around 04:51 |
+
+wearStatus is 2 while worn; 3 is probably "not detected", since it appeared
+for 40 seconds in the middle of the night. Unconfirmed.

@@ -49,6 +49,9 @@ data class SleepInterval(val relStart: Long, val relEnd: Long) : Decoded
 
 data class DeviceStatus(val batteryPercent: Int, val chargeState: Int?) : Decoded
 
+/** Tentative: 2 seen while worn, 3 briefly during the night. */
+data class WearStatus(val state: Int) : Decoded
+
 data class DeviceInfo(val firmware: String, val hardware: String?) : Decoded
 
 private fun dayAnchored(tzMin: Int, dayBase: Long): Boolean =
@@ -148,7 +151,9 @@ fun decode(frame: Frame): Decoded? {
     }
     if (frame.module == R1.MODULE_SYSTEM && frame.cmd == 0) {
         return when (frame.subCmd) {
-            R1.SYS_DEVICE_STATUS -> DeviceStatus(d.u8(0), if (d.size > 1) d.u8(1) else null)
+            // The hourly heartbeat carries the same fields as deviceStatus.
+            R1.SYS_DEVICE_STATUS, R1.SYS_HEARTBEAT -> DeviceStatus(d.u8(0), if (d.size > 1) d.u8(1) else null)
+            R1.SYS_WEAR_STATUS -> WearStatus(d.u8(0))
             R1.SYS_DEVICE_INFO -> DeviceInfo(
                 ascii(d, 0, minOf(16, d.size)),
                 if (d.size >= 32) ascii(d, 16, 32) else null,

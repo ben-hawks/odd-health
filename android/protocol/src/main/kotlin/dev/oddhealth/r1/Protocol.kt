@@ -34,6 +34,8 @@ object R1 {
 
     const val SYS_DEVICE_STATUS = 0x01
     const val SYS_DEVICE_INFO = 0x02
+    const val SYS_WEAR_STATUS = 0x03
+    const val SYS_HEARTBEAT = 0x7F
     const val SYS_PAIR_AUTH = 0x08
     const val SYS_PACKET_ACK = 0x7E
 

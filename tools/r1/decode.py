@@ -99,7 +99,10 @@ def decode_frame(frame: Frame) -> dict | None:
         if frame.cmd == 6:
             return decode_sleep(d)
     if frame.module == MODULE_SYSTEM and frame.cmd == 0 and d:
-        if frame.sub_cmd == 0x01:
+        if frame.sub_cmd == 0x03:
+            # Tentative: 2 seen while worn, 3 briefly during the night.
+            return {"wear_state": d[0]}
+        if frame.sub_cmd in (0x01, 0x7F):  # deviceStatus; the hourly heartbeat carries the same fields
             out = {"battery_percent": d[0]}
             if len(d) > 1:
                 out["charge_state"] = CHARGE_STATES.get(d[1], d[1])
