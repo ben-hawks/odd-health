@@ -1,8 +1,9 @@
 # Privacy
 
 Odd Health has no account, no servers, no analytics, no advertising and no
-crash reporting. The app does not request internet access: Android does not let
-it reach the network at all.
+crash reporting. Its only use of the internet is checking GitHub for new
+versions of the app and downloading them (see [App updates](#app-updates)); no
+health data is ever sent over the network by the app.
 
 ## What the app handles
 
@@ -45,6 +46,32 @@ Only when you choose to, in these ways:
    **Share logs** and pick where to send them; **Delete logs** removes them.
 3. **Even export import.** The app reads a zip file you pick. It does not keep
    a copy of the file.
+4. **Bug reports.** Only when you submit a GitHub issue yourself; see below.
+
+## App updates
+
+The app contacts GitHub (`api.github.com` and `github.com`) to:
+
+- read the latest release when you tap **Check now**, and once a day in the
+  background if **Notify me about updates** is on (it is on by default; turn it
+  off in Sync → App updates);
+- download the new version when you tap **Download and install**.
+
+These requests carry only what any web request does (your IP address, and a
+`User-Agent` naming the app and its version). They contain no health data and
+no identifiers. GitHub's own privacy statement covers what it logs. Downloads
+are checked against the release's published SHA-256 checksum, and Android only
+installs an update signed with the same key as the installed app.
+
+## Bug reports
+
+**Sync → Report a bug** opens the project's GitHub issue form in your browser,
+with the app version, Android version, phone model and ring firmware filled in.
+Nothing is sent until you submit the form, and you can edit or remove any field
+first. If you choose "Include debug log", the app copies its debug logs to your
+phone's Downloads folder so you can attach them; the copy stays there until you
+delete it. **GitHub issues are public**, and debug logs contain your health data
+and your ring's Bluetooth address.
 
 ## The ring and the Even app
 
@@ -62,6 +89,8 @@ Realities' own privacy policy.
 | Notifications | For the ongoing notification shown while connected to the ring |
 | Run in the foreground (connected device) | To stay connected to the ring in the background |
 | Run at startup | To reconnect after the phone restarts, if "Stay connected" is on |
+| Internet | Update checks and downloads from GitHub only |
+| Install apps | To install a downloaded update (Android asks you to allow it once, then to confirm each install) |
 | Health Connect: write heart rate, resting heart rate, HRV, oxygen saturation, steps, total and active calories, sleep, body and skin temperature | To write your data to Health Connect |
 
 ## Contact

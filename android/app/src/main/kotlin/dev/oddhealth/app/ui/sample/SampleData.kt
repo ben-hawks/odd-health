@@ -50,7 +50,7 @@ object SampleData {
             list.maxOf { it.max }, list)
     }
 
-    val heartRate = vital(base = 78.0, amp = 14.0, spread = 8, hours = 12, latest = 84)
+    val heartRate = vital(base = 78.0, amp = 14.0, spread = 8, hours = 12, latest = 84).copy(resting = 58)
     val hrv = vital(base = 48.0, amp = -14.0, spread = 4, hours = 12, latest = 44)
     val spo2 = VitalSummary(96, LocalTime.of(11, 39), 91, 96, 99,
         (0 until 12).map { HourRange(it, 94 + it % 3, 96 + (it % 2), 98 + (it % 2)) })
@@ -127,6 +127,7 @@ object SampleData {
         sync = sync,
         types = listOf(
             SyncTypeRow("Heart rate", "Heart rate", TypeStatus.WRITTEN, "Hourly average and live readings"),
+            SyncTypeRow("Resting heart rate", "Resting heart rate", TypeStatus.WRITTEN, "Estimated: lowest hourly average during sleep"),
             SyncTypeRow("Heart rate range", null, TypeStatus.APP_ONLY, "Hourly minimum and maximum"),
             SyncTypeRow("HRV", "Heart rate variability", TypeStatus.WRITTEN, "Hourly average (RMSSD)"),
             SyncTypeRow("Blood oxygen", "Oxygen saturation", TypeStatus.WRITTEN, "Hourly average"),
@@ -134,6 +135,7 @@ object SampleData {
             SyncTypeRow("Calories", "Total and active calories", TypeStatus.WRITTEN, "10-minute totals"),
             SyncTypeRow("Sleep", "Sleep session with stages", TypeStatus.WRITTEN, null),
             SyncTypeRow("Sleep score, efficiency", null, TypeStatus.APP_ONLY, "Copied into the sleep session's notes"),
+            SyncTypeRow("Nightly temperature", "Body temperature (finger)", TypeStatus.WRITTEN, "Measured at the finger, so about 1 °C below core temperature"),
             SyncTypeRow("Skin temperature", "Skin temperature", TypeStatus.WRITTEN, "Change from your 30-night baseline"),
         ),
         stored = mapOf(Metric.HEART_RATE to 2_591, Metric.HRV to 2_445, Metric.SPO2 to 2_237, Metric.ACTIVITY to 9_064,

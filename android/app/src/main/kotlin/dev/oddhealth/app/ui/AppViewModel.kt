@@ -20,6 +20,10 @@ import dev.oddhealth.app.ui.model.TodayState
 import dev.oddhealth.app.ui.model.TypeStatus
 import dev.oddhealth.app.ui.model.UiMapping
 import dev.oddhealth.app.ui.model.Words
+import dev.oddhealth.app.report.BugReport
+import dev.oddhealth.app.ui.update.UpdateScreenState
+import dev.oddhealth.app.update.UpdateState
+import dev.oddhealth.app.update.UpdateWorker
 import dev.oddhealth.core.ingest.EvenExport
 import dev.oddhealth.core.model.RecordKind
 import dev.oddhealth.core.model.SkinTemperature
@@ -225,6 +229,49 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setStayConnected(on: Boolean) {
         graph.settings.setStayConnected(on)
         if (on) RingService.start(getApplication()) else RingService.stop(getApplication())
+    }
+
+    val updates: StateFlow<UpdateScreenState?> = combine(
+        graph.updates.state, graph.settings.updateNotifications, graph.settings.lastUpdateCheck,
+    ) { state, notify, last -> UpdateScreenState(graph.updates.currentVersion, state, notify, last, graph.updates.canInstall) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun checkForUpdate() = viewModelScope.launch { graph.updates.check() }
+
+    /** Returns false when Android first needs "install unknown apps" allowed for this app. */
+    fun installUpdate(): Boolean {
+        val release = when (val s = graph.updates.state.value) {
+            is UpdateState.Available -> s.release
+            is UpdateState.Failed -> s.release
+            else -> null
+        } ?: return true
+        if (!graph.updates.installAllowed()) return false
+        viewModelScope.launch { graph.updates.downloadAndInstall(release) }
+        return true
+    }
+
+    fun setUpdateNotifications(on: Boolean) {
+        graph.settings.setUpdateNotifications(on)
+        UpdateWorker.schedule(getApplication(), on)
+    }
+
+    /**
+     * Report a bug: optionally save the debug logs to Downloads, then return the
+     * pre-filled GitHub issue link to open.
+     */
+    suspend fun prepareBugReport(includeLogs: Boolean): String {
+        val app = getApplication<Application>()
+        if (includeLogs) {
+            try {
+                val name = withContext(Dispatchers.IO) {
+                    graph.debugLog.zip()?.let { BugReport.saveToDownloads(app, it) }
+                }
+                if (name != null) messages.send(app.getString(R.string.report_saved, name))
+            } catch (e: java.io.IOException) {
+                messages.send(app.getString(R.string.report_save_failed, e.message ?: e.toString()))
+            }
+        }
+        return BugReport.issueUrl(graph.settings.firmware)
     }
 
     fun setHrPollMinutes(minutes: Int) = graph.settings.setHrPollMinutes(minutes)

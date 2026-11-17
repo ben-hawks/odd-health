@@ -1,0 +1,85 @@
+name: Bug report
+description: Something in Odd Health doesn't work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. **Issues here are public.** Don't paste
+        health readings you want to keep private, and read the note on debug
+        logs below before attaching one.
+
+        The in-app **Sync → Report a bug** fills in the version fields for you.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What went wrong, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What were you doing when it happened? Does it happen every time?
+      placeholder: |
+        1. Open the Ring tab
+        2. Pull down to refresh
+        3. ...
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Ring connection or data
+        - Health Connect sync
+        - Even export import
+        - App updates
+        - Screens and display
+        - Something else
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Sync → About and privacy shows it.
+      placeholder: "0.15.0"
+    validations:
+      required: true
+  - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: "Android 16 (API 36)"
+  - type: input
+    id: device
+    attributes:
+      label: Phone
+      placeholder: "Google Pixel 9"
+  - type: input
+    id: firmware
+    attributes:
+      label: Ring firmware
+      description: Ring tab → Firmware.
+      placeholder: "2.3.2.0008"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Debug log
+      description: |
+        Optional. To capture one: Ring → Debug logging → turn on **Record debug
+        log**, reproduce the problem, then use **Report a bug** with "Include
+        debug log" on. It saves `odd-health-debug-logs-….zip` to your phone's
+        **Downloads**; attach that file here (drag it in, or tap the box and
+        pick it).
+
+        **Debug logs contain your health data and your ring's Bluetooth
+        address, and anything attached here is public.** If you'd rather not
+        share them publicly, say so here and we can arrange another way.
+      placeholder: Attach the zip here, or leave empty.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I understand this issue, and anything attached to it, is public.
+          required: true

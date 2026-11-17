@@ -5,6 +5,15 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+- App updates: check GitHub releases, download, verify the checksum and
+  install, from Sync → App updates. Optional daily check with a notification
+  (on by default). Adds the internet and install-apps permissions; network use
+  is limited to GitHub and sends no health data.
+- Report a bug: opens a pre-filled GitHub issue form, and can save the debug
+  logs to Downloads for attaching. New issue template.
+- Release workflow: latest major versions of all actions.
+- README and user guide screenshots.
+
 ## 0.14.0
 
 First release-ready build.

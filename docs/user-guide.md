@@ -36,6 +36,8 @@ duplicated.
    outside the Play Store), open Health Connect settings → App permissions →
    Odd Health, and allow it there.
 
+<p><img src="../android/app/screenshots/6b-sync-full.png" width="240" alt="Sync tab"></p>
+
 The first sync starts within a minute. Other apps can take a few minutes to
 show new data from Health Connect.
 
@@ -58,6 +60,8 @@ nothing arrives for 75 minutes, it asks the ring itself. New data is written to
 Health Connect about 20 seconds after it arrives.
 
 - **Pull down** on Today, Ring or Sync to ask the ring for data now and sync.
+<p><img src="../android/app/screenshots/1b-today-full.png" width="200" alt="Today"> <img src="../android/app/screenshots/3-heart-rate.png" width="200" alt="Heart rate detail"> <img src="../android/app/screenshots/5-ring.png" width="200" alt="Ring tab"></p>
+
 - **Today** shows the current day; tap a card to see that metric by day, with
   each value marked: in Health Connect, waiting to sync, or kept in this app only.
 - **Ring** shows connection, battery and recent activity, and lets you:
@@ -82,6 +86,22 @@ Health Connect about 20 seconds after it arrives.
 - The **sleep score and efficiency** are the ring's own; Health Connect has no
   type for them, so they are added to the sleep session's notes.
 
+## Updates
+
+<p><img src="../android/app/screenshots/11-updates.png" width="220" alt="App updates"></p>
+
+**Sync → App updates** shows your version and checks GitHub for a newer one.
+With **Notify me about updates** on (the default), the app checks once a day and
+shows a notification when a new version is out.
+
+To update, tap **Download and install**. The first time, Android asks you to
+allow Odd Health to install apps; allow it, go back, and tap the button again.
+Android then asks you to confirm the update. The app restarts on the new
+version with your data intact.
+
+Updates only work between release builds from GitHub. A test (debug) build
+can't be updated this way; uninstall it and install the release instead.
+
 ## Troubleshooting
 
 | Problem | Try |
@@ -96,14 +116,23 @@ Health Connect about 20 seconds after it arrives.
 
 ### Reporting a problem
 
+<p><img src="../android/app/screenshots/12-report.png" width="220" alt="Report a bug"> <img src="../android/app/screenshots/8-debug.png" width="220" alt="Debug logging"></p>
+
 1. **Ring → Debug logging** → turn on **Record debug log**.
 2. Reproduce the problem (for a sync problem, wait for or trigger a sync).
-3. Tap **Share logs** and attach the zip to an issue on the project's GitHub
-   repository, or send it to whoever is helping you.
+3. **Sync → Report a bug**. Turn on **Include debug log** if you want to attach
+   it, then tap **Open bug report on GitHub**.
+4. The app saves `odd-health-debug-logs-….zip` to your Downloads folder and
+   opens the bug report form with your app, Android, phone and ring firmware
+   versions filled in. Describe the problem, attach the zip from Downloads,
+   and submit. You need a GitHub account.
 
-The logs contain your health data and your ring's Bluetooth address. Share
-them only with people you trust, and use **Delete logs** when done. Turn
-logging off again afterwards; it is off by default.
+**GitHub issues are public**, and the logs contain your health data and your
+ring's Bluetooth address. If you'd rather not post them publicly, report the
+problem without the log and say you have one. Alternatively, **Debug logging →
+Share logs** sends the zip privately to someone you choose. Use **Delete logs**
+when done, delete the copy in Downloads, and turn logging off again; it is off
+by default.
 
 ## Removing the app
 

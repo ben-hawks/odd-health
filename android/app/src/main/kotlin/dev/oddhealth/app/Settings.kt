@@ -36,6 +36,27 @@ class Settings(context: Context) {
         _noticeAccepted.value = true
     }
 
+    private val _updateNotifications = MutableStateFlow(prefs.getBoolean(UPDATE_NOTIFY, true))
+    val updateNotifications: StateFlow<Boolean> = _updateNotifications.asStateFlow()
+
+    fun setUpdateNotifications(on: Boolean) {
+        prefs.edit().putBoolean(UPDATE_NOTIFY, on).apply()
+        _updateNotifications.value = on
+    }
+
+    private val _lastUpdateCheck = MutableStateFlow(prefs.getLong(UPDATE_CHECK, 0).takeIf { it > 0 }?.let(Instant::ofEpochMilli))
+    val lastUpdateCheck: StateFlow<Instant?> = _lastUpdateCheck.asStateFlow()
+
+    fun setLastUpdateCheck(at: Instant) {
+        prefs.edit().putLong(UPDATE_CHECK, at.toEpochMilli()).apply()
+        _lastUpdateCheck.value = at
+    }
+
+    /** The newest version a notification was shown for, so each is announced once. */
+    var lastNotifiedVersion: String?
+        get() = prefs.getString(UPDATE_NOTIFIED, null)
+        set(value) = prefs.edit().putString(UPDATE_NOTIFIED, value).apply()
+
     var firmware: String?
         get() = prefs.getString(FIRMWARE, null)
         set(value) = prefs.edit().putString(FIRMWARE, value).apply()
@@ -62,5 +83,8 @@ class Settings(context: Context) {
         const val FIRMWARE = "firmware"
         const val HR_POLL = "hr_poll_minutes"
         const val NOTICE = "notice_accepted_v1"
+        const val UPDATE_NOTIFY = "update_notifications"
+        const val UPDATE_CHECK = "update_last_check"
+        const val UPDATE_NOTIFIED = "update_last_notified"
     }
 }

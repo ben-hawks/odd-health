@@ -26,6 +26,7 @@ import dev.oddhealth.app.ui.AppShell
 import dev.oddhealth.app.ui.AppViewModel
 import dev.oddhealth.app.ui.Dest
 import dev.oddhealth.app.ui.theme.OddHealthTheme
+import dev.oddhealth.app.update.UpdateWorker
 import dev.oddhealth.healthconnect.HealthConnectMapping
 
 class MainActivity : ComponentActivity() {
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
         // Health Connect opens us to explain how data is used; show the About screen then.
         val start = if (intent?.action == "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" ||
             intent?.action == Intent.ACTION_VIEW_PERMISSION_USAGE
-        ) Dest.About else Dest.Today
+        ) Dest.About else if (intent?.getBooleanExtra(UpdateWorker.EXTRA_OPEN_UPDATES, false) == true) Dest.Updates else Dest.Today
 
         setContent {
             OddHealthTheme {
@@ -45,6 +46,7 @@ class MainActivity : ComponentActivity() {
                 val ring by vm.ring.collectAsStateWithLifecycle()
                 val sync by vm.sync.collectAsStateWithLifecycle()
                 val debug by vm.debug.collectAsStateWithLifecycle()
+                val updates by vm.updates.collectAsStateWithLifecycle()
                 val now by vm.now.collectAsStateWithLifecycle()
                 val importing by vm.importing.collectAsStateWithLifecycle()
                 val refreshing by vm.refreshing.collectAsStateWithLifecycle()
@@ -74,7 +76,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 AppShell(
-                    today = today, ring = ring, sync = sync, debug = debug,
+                    today = today, ring = ring, sync = sync, debug = debug, updates = updates,
                     detail = vm::detail, now = now, importing = importing, refreshing = refreshing, start = start,
                     version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty(),
                     noticeAccepted = noticeAccepted,
@@ -91,6 +93,18 @@ class MainActivity : ComponentActivity() {
                         shareDebugLogs = { shareDebugLogs() },
                         deleteDebugLogs = vm::deleteDebugLogs,
                         acceptNotice = graph.settings::acceptNotice,
+                        checkUpdate = { vm.checkForUpdate() },
+                        installUpdate = {
+                            // Android must first allow this app to install apps; send the user to that setting.
+                            if (!vm.installUpdate()) startActivity(graph.updates.installPermissionIntent())
+                        },
+                        setUpdateNotifications = vm::setUpdateNotifications,
+                        reportBug = { includeLogs ->
+                            lifecycleScope.launch {
+                                val url = vm.prepareBugReport(includeLogs)
+                                startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)))
+                            }
+                        },
                     ),
                 )
             }

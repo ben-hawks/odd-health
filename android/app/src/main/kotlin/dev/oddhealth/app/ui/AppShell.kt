@@ -21,6 +21,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.oddhealth.app.ui.about.AboutScreen
 import dev.oddhealth.app.ui.about.FirstRunNotice
 import dev.oddhealth.app.ui.debug.DebugScreen
+import dev.oddhealth.app.ui.report.ReportScreen
+import dev.oddhealth.app.ui.update.UpdateScreen
+import dev.oddhealth.app.ui.update.UpdateScreenState
+import dev.oddhealth.app.update.UpdateState
 import dev.oddhealth.app.ui.model.DebugState
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -48,6 +52,8 @@ sealed interface Dest {
     data class Detail(val metric: Metric) : Dest
     data object Debug : Dest
     data object About : Dest
+    data object Updates : Dest
+    data object Report : Dest
 }
 
 private enum class Tab(val dest: Dest, val label: Int, val selected: ImageVector, val unselected: ImageVector) {
@@ -69,6 +75,10 @@ class AppActions(
     val shareDebugLogs: () -> Unit = {},
     val deleteDebugLogs: () -> Unit = {},
     val acceptNotice: () -> Unit = {},
+    val checkUpdate: () -> Unit = {},
+    val installUpdate: () -> Unit = {},
+    val setUpdateNotifications: (Boolean) -> Unit = {},
+    val reportBug: (Boolean) -> Unit = {},
 )
 
 @Composable
@@ -77,6 +87,7 @@ fun AppShell(
     ring: RingScreenState?,
     sync: SyncScreenState?,
     debug: DebugState?,
+    updates: UpdateScreenState? = null,
     detail: (Metric, LocalDate) -> Flow<MetricDetailState>,
     now: Instant,
     actions: AppActions,
@@ -131,7 +142,22 @@ fun AppShell(
                 }
                 entry<Dest.Sync> {
                     sync?.let { SyncScreen(it, now, actions.syncNow, actions.permissions, actions.importExport, importing,
-                        refreshing = refreshing, onRefresh = actions.refresh, onAbout = { backStack.add(Dest.About) }) }
+                        refreshing = refreshing, onRefresh = actions.refresh, onAbout = { backStack.add(Dest.About) },
+                        onUpdates = { backStack.add(Dest.Updates) },
+                        onReport = { backStack.add(Dest.Report) },
+                        updateAvailable = updates?.state.let { it is UpdateState.Available }) }
+                }
+                entry<Dest.Report> {
+                    debug?.let {
+                        ReportScreen(it, onBack = { backStack.removeAt(backStack.lastIndex) },
+                            onOpenDebug = { backStack.add(Dest.Debug) }, onReport = actions.reportBug)
+                    }
+                }
+                entry<Dest.Updates> {
+                    updates?.let {
+                        UpdateScreen(it, now, onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) else goTo(Dest.Sync) },
+                            actions.checkUpdate, actions.installUpdate, actions.setUpdateNotifications)
+                    }
                 }
                 entry<Dest.About> {
                     AboutScreen(version, onBack = if (backStack.size > 1) ({ backStack.removeAt(backStack.lastIndex) }) else null)

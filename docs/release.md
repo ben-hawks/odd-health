@@ -122,10 +122,23 @@ Without signing settings the build still succeeds but produces
 - [ ] If what a record type is written as in Health Connect changed, its
       revision in `HealthConnectMapping.revision` was bumped so stored records
       are sent again.
+- [ ] The release is not marked pre-release, so the in-app updater offers it.
 - [ ] If new data, permissions or destinations were added:
       [PRIVACY.md](../PRIVACY.md), [DISCLAIMER.md](../DISCLAIMER.md), the
       About screen text (`about_*` strings) and the README table are updated.
 - [ ] CHANGELOG.md updated.
+
+## Updates and bug reports depend on the repository
+
+The in-app updater reads `https://api.github.com/repos/<repo>/releases/latest`
+and the bug reporter opens `https://github.com/<repo>/issues/new`, where
+`<repo>` is `UPDATE_REPO` in `android/app/build.gradle.kts`
+(`ben-hawks/odd-health`). Both need the repository to be **public**, and the
+updater only sees full (not pre-) releases whose assets follow the workflow's
+naming: `odd-health-X.Y.Z.apk` plus `odd-health-X.Y.Z.apk.sha256`. A release
+without the `.sha256` file is refused. The bug report form is
+`.github/ISSUE_TEMPLATE/bug_report.yml`; its field ids are filled in by the app
+(`BugReport.kt`), so keep them in step if you rename fields.
 
 ## Health Connect outside the Play Store
 

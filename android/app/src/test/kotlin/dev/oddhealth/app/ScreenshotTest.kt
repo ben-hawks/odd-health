@@ -76,9 +76,31 @@ class ScreenshotTest {
         )
     }
 
+    @Test fun updates() = shot("11-updates") {
+        dev.oddhealth.app.ui.update.UpdateScreen(
+            dev.oddhealth.app.ui.update.UpdateScreenState(
+                current = "0.14.0",
+                state = dev.oddhealth.app.update.UpdateState.Available(
+                    dev.oddhealth.app.update.Release("0.15.0", "v0.15.0", "- App updates from GitHub\n- Update notifications",
+                        "", "", 2_700_000, null),
+                ),
+                notifications = true, lastCheck = now.minusSeconds(120), canInstall = true,
+            ),
+            now, {}, {}, {}, {},
+        )
+    }
+
+    @Test fun report() = shot("12-report") {
+        dev.oddhealth.app.ui.report.ReportScreen(DebugState(true, 2, 380_000), {}, {}, {})
+    }
+
     @Test fun debug() = shot("8-debug") { DebugScreen(DebugState(true, 3, 412_000), {}, {}, {}, {}) }
 
     @Test fun sync() = shot("6-sync") { SyncScreen(SampleData.syncScreen, now, {}, {}, {}) }
+
+    /** The whole Sync tab, down to Updates, Report a bug and About. */
+    @Config(qualifiers = "w412dp-h1700dp-xxhdpi")
+    @Test fun syncFull() = shot("6b-sync-full") { SyncScreen(SampleData.syncScreen, now, {}, {}, {}) }
 
     @Test fun syncDark() = shot("7-sync-dark", dark = true) { SyncScreen(SampleData.syncScreen, now, {}, {}, {}) }
 }

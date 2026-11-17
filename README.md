@@ -38,8 +38,20 @@ Even Realities or Google.
   Hourly minimum/maximum, sleep score and efficiency have no Health Connect
   type and stay in the app.
 - **Imports an Even health export** to bring in older history.
-- **Keeps everything on the phone.** No account, no servers, no analytics, no
-  internet permission. See [PRIVACY.md](PRIVACY.md).
+- **Keeps everything on the phone.** No account, no servers, no analytics.
+  The only network use is checking GitHub for app updates. See
+  [PRIVACY.md](PRIVACY.md).
+- **Updates itself** from GitHub releases, with optional notifications, and
+  has a **Report a bug** form that can attach a debug log.
+
+## Screenshots
+
+<img src="android/app/screenshots/1b-today-full.png" width="200" alt="Today"> <img src="android/app/screenshots/3-heart-rate.png" width="200" alt="Heart rate detail"> <img src="android/app/screenshots/4-sleep.png" width="200" alt="Sleep detail">
+
+<img src="android/app/screenshots/5-ring.png" width="200" alt="Ring tab"> <img src="android/app/screenshots/6b-sync-full.png" width="200" alt="Sync tab"> <img src="android/app/screenshots/2-today-dark.png" width="200" alt="Today in dark theme">
+
+On your phone the colours follow your wallpaper (Material You); the screenshots
+use the fallback theme and sample data.
 
 ## Requirements
 

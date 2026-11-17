@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Not a medical service
+    url: https://github.com/ben-hawks/odd-health/blob/main/DISCLAIMER.md
+    about: Odd Health can't help with health concerns. If you feel unwell, contact a doctor or your local emergency number.

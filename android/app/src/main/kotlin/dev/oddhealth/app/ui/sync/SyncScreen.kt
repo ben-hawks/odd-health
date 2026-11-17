@@ -70,6 +70,9 @@ fun SyncScreen(
     refreshing: Boolean = false,
     onRefresh: () -> Unit = {},
     onAbout: () -> Unit = {},
+    onUpdates: () -> Unit = {},
+    onReport: () -> Unit = {},
+    updateAvailable: Boolean = false,
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val ready = state.sync.state == HealthConnectState.READY
@@ -193,6 +196,24 @@ fun SyncScreen(
                 item {
                     ListGroup(
                         items = listOf({
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.updates_title)) },
+                                supportingContent = {
+                                    Text(stringResource(if (updateAvailable) R.string.update_entry_available else R.string.update_entry_body))
+                                },
+                                trailingContent = { Icon(Icons.Rounded.ChevronRight, contentDescription = null) },
+                                modifier = Modifier.clickable(onClick = onUpdates),
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }, {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.report_title)) },
+                                supportingContent = { Text(stringResource(R.string.report_entry_body)) },
+                                trailingContent = { Icon(Icons.Rounded.ChevronRight, contentDescription = null) },
+                                modifier = Modifier.clickable(onClick = onReport),
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }, {
                             ListItem(
                                 headlineContent = { Text(stringResource(R.string.about_title)) },
                                 supportingContent = { Text(stringResource(R.string.about_entry_body)) },
