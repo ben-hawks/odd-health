@@ -59,30 +59,47 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
     }
 
     override suspend fun write(records: List<HealthRecord>, context: SyncContext): WriteResult {
-        val c = client ?: return WriteResult(emptyList(), records.associateWith { "Health Connect not available" })
+        val c = client ?: return WriteResult(emptyList(), failed = records.associateWith { "Health Connect not available" })
         var history: List<SkinTemperature>? = null
-        val written = ArrayList<HealthRecord>()
+        val skipped = HashMap<HealthRecord, String>()
         val failed = HashMap<HealthRecord, String>()
-        val out = ArrayList<Record>()
-        val sources = ArrayList<HealthRecord>()
+        val mapped = ArrayList<Pair<HealthRecord, List<Record>>>()
         for (r in records) {
-            val mapped = try {
+            try {
                 if (r is SkinTemperature && history == null) {
-                    history = context.history(RecordKind.SKIN_TEMPERATURE, SkinBaseline.NIGHTS * 4).filterIsInstance<SkinTemperature>()
+                    history = context.history(RecordKind.SKIN_TEMPERATURE, SkinBaseline.NIGHTS * 8).filterIsInstance<SkinTemperature>()
                 }
-                map(r, history.orEmpty())
+                mapped += r to map(r, history.orEmpty())
+            } catch (e: BaselineNotReady) {
+                // Recent nights wait for a baseline; the first few nights ever never get one.
+                if (r.end < java.time.Instant.now().minus(java.time.Duration.ofDays(3))) skipped[r] = e.message!! else failed[r] = e.message!!
             } catch (e: IllegalArgumentException) {
-                failed[r] = e.message ?: "invalid value"
-                continue
+                // Health Connect rejects values outside its ranges when the record is built.
+                skipped[r] = e.message ?: "invalid value"
             }
-            // Nothing to write (e.g. a bucket with no steps or calories) counts as done.
-            out += mapped
-            sources += r
         }
-        if (out.isNotEmpty()) c.insertRecords(out)
-        written += sources
-        return WriteResult(written, failed)
+        val written = ArrayList<HealthRecord>()
+        val all = mapped.flatMap { it.second }
+        try {
+            if (all.isNotEmpty()) c.insertRecords(all)
+            mapped.mapTo(written) { it.first }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            // One bad record fails the whole batch; retry one by one to find it.
+            for ((r, recs) in mapped) {
+                try {
+                    if (recs.isNotEmpty()) c.insertRecords(recs)
+                    written += r
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    if (e is SecurityException || e is android.os.RemoteException) failed[r] = e.toString() else skipped[r] = e.toString()
+                }
+            }
+        }
+        return WriteResult(written, skipped, failed)
     }
+
+    private class BaselineNotReady(message: String) : Exception(message)
 
     private fun metadata(r: HealthRecord, suffix: String = "") =
         Metadata.autoRecorded(device = device, clientRecordId = r.key + suffix, clientRecordVersion = r.version)
@@ -138,7 +155,7 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
         )
         is SkinTemperature -> {
             val baseline = SkinBaseline.forNight(r, skinHistory)
-                ?: throw IllegalArgumentException("waiting for ${SkinBaseline.MIN_NIGHTS} nights to set a baseline")
+                ?: throw BaselineNotReady("waiting for ${SkinBaseline.MIN_NIGHTS} nights to set a baseline")
             listOf(
                 SkinTemperatureRecord(
                     startTime = r.start, startZoneOffset = r.zone, endTime = r.end, endZoneOffset = r.zone,

@@ -82,8 +82,13 @@ object EvenExport {
         val nights = sleepRows
             .filter { (it["total_time"]?.toIntOrNull() ?: 0) > 0 }
             .groupBy { it["start_ts"] }
-            .mapNotNull { (_, rows) -> rows.maxByOrNull { time(it["end_ts"])?.toEpochSecond() ?: 0 } }
-        for (row in nights) {
+            .mapNotNull { (_, rows) ->
+                val longest = rows.maxByOrNull { time(it["end_ts"])?.toEpochSecond() ?: 0 } ?: return@mapNotNull null
+                // Temperature rows share a timestamp with one of the night's rows; the latest is the final value.
+                longest to rows.sortedByDescending { time(it["timestamp"])?.toEpochSecond() ?: 0 }
+                    .firstNotNullOfOrNull { r -> temps[r["timestamp"]]?.takeIf { it > 0 } }
+            }
+        for ((row, temp) in nights) {
             val start = time(row["start_ts"]) ?: run { skipped++; null } ?: continue
             val end = time(row["end_ts"]) ?: continue
             val stages = ArrayList<SleepStage>()
@@ -95,8 +100,7 @@ object EvenExport {
             }
             val session = SleepSession(start.toInstant(), end.toInstant(), start.offset, stages, null, null, DataSource.EVEN_EXPORT, importedAtMillis)
             put(session, true)
-            val temp = temps[row["timestamp"]]
-            if (temp != null && temp > 0) {
+            if (temp != null) {
                 put(SkinTemperature(session.start, session.end, session.zone, temp, DataSource.EVEN_EXPORT, importedAtMillis), true)
             }
         }

@@ -3,10 +3,9 @@
 Read health data from an Even Realities R1 ring over Bluetooth, without the
 Even app, and sync it to Health Connect on Android.
 
-Status: protocol confirmed on a real ring (firmware 2.3.2.0008) with nRF Connect;
-heart rate, HRV, SpO2, steps and calories decode to exactly the values in the
-Even app's export, and sleep decodes consistently. The Android app listens and
-records; it does not store history or write to Health Connect yet.
+Status: protocol confirmed on a real ring (firmware 2.3.2.0008); every metric
+decodes to the values in the Even app's export. The Android app stores ring
+data and syncs it to Health Connect.
 
 ## Layout
 
@@ -25,44 +24,50 @@ records; it does not store history or write to Health Connect yet.
 
 ## Android app
 
-Needs Android 12 or later and a ring already paired through the Even app.
+Needs Android 12 or later, Health Connect, and a ring already paired through
+the Even app.
 
-It keeps a connection to the ring alongside the Even app and records every
-notification the ring sends, including the Even app's own syncs. On screen it
-shows the connection state and one line per decoded frame.
+- **Today**: last night's sleep, heart rate, HRV, blood oxygen, activity and
+  skin temperature. Tap a card for that metric by day, with each value marked
+  as in Health Connect, waiting, or kept in this app only.
+- **Ring**: connection, battery, firmware, recent ring activity, and
+  "Request data". The app stays connected alongside the Even app and stores
+  every sync it sees. It never acknowledges data, so the Even app's history
+  is unaffected. If nothing arrives for 75 minutes it asks the ring itself.
+- **Sync**: Health Connect status and permissions, what is written as which
+  type, and import of an Even health export for older history.
+- **Debug logging** (Ring tab, off by default): records raw Bluetooth traffic
+  and app events to daily files that `tools/r1tool.py decode` reads, to share
+  when something goes wrong.
 
-- **Request data** opens a session and asks the ring for device info, battery,
-  heart rate, SpO2, HRV, activity and sleep. Reads only.
-- **Acknowledge health data** (off by default) answers each health push with a
-  packetAck, which marks that data as synced on the ring.
-- **Share log** sends the current day's capture file. `tools/r1tool.py decode`
-  reads it directly.
+What goes to Health Connect: hourly average heart rate plus live readings,
+hourly HRV (RMSSD) and SpO₂, 10-minute steps and total/active calories, sleep
+sessions with stages (score and efficiency in the notes), and nightly skin
+temperature as the change from a 30-night baseline. Hourly min/max and the
+sleep score are shown in the app only.
 
-The app never turns ring notifications off and cannot build the commands listed
-as dangerous in [docs/protocol.md](docs/protocol.md).
+### Code
 
-Build: `cd android && ./gradlew :app:assembleDebug` (needs the Android SDK,
-platform 35). The APK lands in `android/app/build/outputs/apk/debug/`. Debug
-builds are signed with the key in `android/debug.keystore` so each build
-installs over the previous one. Tests: `./gradlew :protocol:test`.
+- `android/protocol`: ring framing and payload decoding (pure Kotlin).
+- `android/core`: the record model, ring and Even-export ingestion, and the
+  sync engine. A sync destination is a `SyncTarget`; adding another health
+  service means adding one implementation.
+- `android/healthconnect`: the Health Connect `SyncTarget`.
+- `android/app`: Room storage, the Bluetooth service, Compose UI (Material 3
+  Expressive, Navigation 3).
+
+Build: `cd android && ./gradlew :app:assembleDebug` (Android SDK with platform
+37, JDK 17+). Tests: `./gradlew :protocol:test :core:test :app:testDebugUnitTest`.
+Screenshots of each screen: `./gradlew :app:recordRoborazziDebug`, written to
+`android/app/screenshots/`. Debug builds are signed with `android/debug.keystore`
+so each build installs over the previous one.
 
 ## Plan
 
 1. **Verify on a real ring.** Follow the capture guide; fix the decoders until
    `r1tool.py compare` reports no mismatches against an Even export.
-2. **Android app.** Listener and capture log are done. Next: store decoded
-   records locally, request data by itself when the Even app has not synced.
-3. **Health Connect.** Write the stored records:
-
-   | Ring data | Health Connect record |
-   |---|---|
-   | hourly heart rate, plus polled current value | `HeartRateRecord` |
-   | hourly HRV | `HeartRateVariabilityRmssdRecord` (if the ring's HRV is RMSSD; unconfirmed) |
-   | hourly SpO2 | `OxygenSaturationRecord` |
-   | 10-minute steps | `StepsRecord` |
-   | 10-minute calories | `TotalCaloriesBurnedRecord`, `ActiveCaloriesBurnedRecord` |
-   | sleep with stages | `SleepSessionRecord` |
-   | nightly skin temperature | `SkinTemperatureRecord` |
+2. **Android app.** Done: listener, local storage, Even export import.
+3. **Health Connect.** Done; see above.
 
 This app and the Even app share the ring's phone link, and both receive
 everything the ring sends. The ring's link to the glasses is separate, so

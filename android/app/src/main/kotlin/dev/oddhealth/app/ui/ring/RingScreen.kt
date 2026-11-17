@@ -1,5 +1,6 @@
 package dev.oddhealth.app.ui.ring
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Download
-import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -29,7 +30,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
@@ -57,8 +57,8 @@ fun RingScreen(
     state: RingScreenState,
     now: Instant,
     onRequestData: () -> Unit,
-    onShareLog: () -> Unit,
     onListeningChange: (Boolean) -> Unit,
+    onDebug: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -116,17 +116,10 @@ fun RingScreen(
                                 LinearWavyProgressIndicator(progress = { pct / 100f }, modifier = Modifier.fillMaxWidth())
                             }
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(Space.s)) {
-                            Button(onClick = onRequestData, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                Text(stringResource(R.string.request_data))
-                            }
-                            OutlinedButton(onClick = onShareLog, modifier = Modifier.weight(1f)) {
-                                Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                                Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                Text(stringResource(R.string.share_log))
-                            }
+                        Button(onClick = onRequestData, enabled = ring.connected, modifier = Modifier.fillMaxWidth()) {
+                            Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                            Text(stringResource(R.string.request_data))
                         }
                     }
                 }
@@ -139,6 +132,15 @@ fun RingScreen(
                                 headlineContent = { Text(stringResource(R.string.listen_title)) },
                                 supportingContent = { Text(stringResource(R.string.listen_body)) },
                                 trailingContent = { Switch(checked = state.listening, onCheckedChange = onListeningChange) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        },
+                        {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.debug_logging)) },
+                                supportingContent = { Text(stringResource(if (state.debugLogging) R.string.on else R.string.off)) },
+                                trailingContent = { Icon(Icons.Rounded.ChevronRight, contentDescription = null) },
+                                modifier = Modifier.clickable(onClick = onDebug),
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
                         },
@@ -161,8 +163,8 @@ fun RingScreen(
                     ),
                 )
             }
-            item { SectionHeader(stringResource(R.string.recent_activity)) }
-            item {
+            if (state.events.isNotEmpty()) item { SectionHeader(stringResource(R.string.recent_activity)) }
+            if (state.events.isNotEmpty()) item {
                 ListGroup(
                     items = state.events.map { e ->
                         @Composable {

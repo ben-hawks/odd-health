@@ -24,7 +24,16 @@ interface SyncTarget {
     suspend fun write(records: List<HealthRecord>, context: SyncContext): WriteResult
 }
 
-data class WriteResult(val written: List<HealthRecord>, val failed: Map<HealthRecord, String> = emptyMap())
+/**
+ * [written]: stored. [skipped]: can never be stored by this target (e.g. a value
+ * out of its allowed range); treated as done so they stop being retried.
+ * [failed]: not stored this time; retried on the next sync.
+ */
+data class WriteResult(
+    val written: List<HealthRecord>,
+    val skipped: Map<HealthRecord, String> = emptyMap(),
+    val failed: Map<HealthRecord, String> = emptyMap(),
+)
 
 /** Read access for targets that need more than the record itself. */
 interface SyncContext {
@@ -40,7 +49,7 @@ interface SyncLedger {
 }
 
 sealed interface SyncOutcome {
-    data class Done(val target: String, val written: Int, val failed: Int) : SyncOutcome
+    data class Done(val target: String, val written: Int, val skipped: Int, val failed: Int) : SyncOutcome
     data class Skipped(val target: String, val reason: String) : SyncOutcome
 }
 
@@ -53,17 +62,21 @@ class SyncEngine(
         val kinds = target.writableKinds()
         if (kinds.isEmpty()) return SyncOutcome.Skipped(target.displayName, "no data types allowed")
         var written = 0
+        var skipped = 0
         var failed = 0
+        val retryLater = HashSet<String>()
         while (true) {
-            val batch = ledger.pending(target.id, kinds, batchSize)
+            // Records that failed this run stay pending; skip past them rather than loop.
+            val batch = ledger.pending(target.id, kinds, batchSize + retryLater.size).filter { it.key !in retryLater }
             if (batch.isEmpty()) break
-            val result = target.write(batch, context)
-            ledger.markSynced(target.id, result.written)
+            val result = target.write(batch.take(batchSize), context)
+            ledger.markSynced(target.id, result.written + result.skipped.keys)
             written += result.written.size
+            skipped += result.skipped.size
             failed += result.failed.size
-            // Stop rather than loop forever on records the target keeps rejecting.
-            if (result.written.isEmpty()) break
+            result.failed.keys.mapTo(retryLater) { it.key }
+            if (result.written.isEmpty() && result.skipped.isEmpty() && result.failed.isEmpty()) break
         }
-        return SyncOutcome.Done(target.displayName, written, failed)
+        return SyncOutcome.Done(target.displayName, written, skipped, failed)
     }
 }

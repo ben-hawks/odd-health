@@ -15,6 +15,7 @@ roborazzi = "1.79.0"
 # Release candidate: the stable 1.4 line keeps the Expressive components internal.
 material3 = "1.5.0-rc01"
 junit = "4.13.2"
+androidxTestCore = "1.7.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -40,6 +41,7 @@ room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
 junit = { module = "junit:junit", version.ref = "junit" }
+androidx-test-core = { module = "androidx.test:core-ktx", version.ref = "androidxTestCore" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
 roborazzi = { module = "io.github.takahirom.roborazzi:roborazzi", version.ref = "roborazzi" }
 roborazzi-compose = { module = "io.github.takahirom.roborazzi:roborazzi-compose", version.ref = "roborazzi" }

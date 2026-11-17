@@ -11,6 +11,9 @@ import dev.oddhealth.app.ui.ring.RingScreen
 import dev.oddhealth.app.ui.sample.SampleData
 import dev.oddhealth.app.ui.sync.SyncScreen
 import dev.oddhealth.app.ui.AppShell
+import dev.oddhealth.app.ui.debug.DebugScreen
+import dev.oddhealth.app.ui.model.DebugState
+import kotlinx.coroutines.flow.flowOf
 import dev.oddhealth.app.ui.theme.OddHealthTheme
 import org.junit.Rule
 import org.junit.Test
@@ -39,8 +42,8 @@ class ScreenshotTest {
 
     @Composable
     private fun shell() = AppShell(
-        SampleData.today, SampleData.ringScreen, SampleData.syncScreen,
-        detail = { SampleData.heartRateDetail }, now = now, actions = AppActions(),
+        SampleData.today, SampleData.ringScreen, SampleData.syncScreen, DebugState(false, 0, 0),
+        detail = { _, _ -> flowOf(SampleData.heartRateDetail) }, now = now, actions = AppActions(),
     )
 
     @Test fun today() = shot("1-today") { shell() }
@@ -56,6 +59,8 @@ class ScreenshotTest {
     @Test fun sleep() = shot("4-sleep") { MetricDetailScreen(SampleData.sleepDetail, {}, {}, null) }
 
     @Test fun ring() = shot("5-ring") { RingScreen(SampleData.ringScreen, now, {}, {}, {}) }
+
+    @Test fun debug() = shot("8-debug") { DebugScreen(DebugState(true, 3, 412_000), {}, {}, {}, {}) }
 
     @Test fun sync() = shot("6-sync") { SyncScreen(SampleData.syncScreen, now, {}, {}, {}) }
 

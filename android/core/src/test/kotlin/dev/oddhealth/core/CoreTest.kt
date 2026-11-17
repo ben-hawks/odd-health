@@ -116,6 +116,34 @@ class CoreTest {
     }
 
     @Test
+    fun syncEngineMovesPastRecordsThatFail() = runTest {
+        val records = (0 until 5).map {
+            HourlyVital(RecordKind.HEART_RATE_HOUR, Instant.ofEpochSecond(it * 3600L), cst, 60, 70, 80, DataSource.RING, 1)
+        }
+        val synced = HashSet<String>()
+        val ledger = object : SyncLedger {
+            override suspend fun pending(targetId: String, kinds: Set<RecordKind>, limit: Int) =
+                records.filter { it.key !in synced }.take(limit)
+            override suspend fun markSynced(targetId: String, records: List<HealthRecord>) {
+                records.forEach { synced += it.key }
+            }
+        }
+        val target = object : SyncTarget {
+            override val id = "t"
+            override val displayName = "T"
+            override suspend fun writableKinds() = setOf(RecordKind.HEART_RATE_HOUR)
+            override suspend fun write(records: List<HealthRecord>, context: SyncContext): WriteResult {
+                val (bad, good) = records.partition { it.start.epochSecond == 0L }
+                return WriteResult(good, failed = bad.associateWith { "no" })
+            }
+        }
+        val context = object : SyncContext {
+            override suspend fun history(kind: RecordKind, limit: Int) = emptyList<HealthRecord>()
+        }
+        assertEquals(SyncOutcome.Done("T", 4, 0, 1), SyncEngine(ledger, context, batchSize = 2).sync(target))
+    }
+
+    @Test
     fun syncEngineWritesPendingAndRemembers() = runTest {
         val records = (0 until 7).map {
             HourlyVital(RecordKind.HEART_RATE_HOUR, Instant.ofEpochSecond(it * 3600L), cst, 60, 70, 80, DataSource.RING, 1)
@@ -142,8 +170,8 @@ class CoreTest {
             override suspend fun history(kind: RecordKind, limit: Int) = emptyList<HealthRecord>()
         }
         val engine = SyncEngine(ledger, context, batchSize = 3)
-        assertEquals(SyncOutcome.Done("Test", 7, 0), engine.sync(target))
-        assertEquals(SyncOutcome.Done("Test", 0, 0), engine.sync(target))
+        assertEquals(SyncOutcome.Done("Test", 7, 0, 0), engine.sync(target))
+        assertEquals(SyncOutcome.Done("Test", 0, 0, 0), engine.sync(target))
         assertEquals(7, target.got.size)
     }
 }

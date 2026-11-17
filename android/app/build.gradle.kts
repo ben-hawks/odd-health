@@ -71,6 +71,8 @@ dependencies {
     ksp(libs.room.compiler)
 
     testImplementation(libs.junit)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.robolectric)
     testImplementation(libs.roborazzi)
     testImplementation(libs.roborazzi.compose)

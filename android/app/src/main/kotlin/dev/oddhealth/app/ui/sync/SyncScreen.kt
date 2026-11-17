@@ -62,6 +62,7 @@ fun SyncScreen(
     onSyncNow: () -> Unit,
     onPermissions: () -> Unit,
     onImport: () -> Unit,
+    importing: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -104,11 +105,14 @@ fun SyncScreen(
                                 )
                             }
                         }
+                        if (state.sync.state == HealthConnectState.NEEDS_PERMISSION) {
+                            Text(stringResource(R.string.hc_sideload_hint), style = MaterialTheme.typography.bodySmall)
+                        }
                         Row(horizontalArrangement = Arrangement.spacedBy(Space.s)) {
-                            Button(onClick = onSyncNow, enabled = ready, modifier = Modifier.weight(1f)) {
+                            Button(onClick = onSyncNow, enabled = ready && !state.syncing, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Rounded.Sync, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                                 Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                                Text(stringResource(R.string.sync_now))
+                                Text(stringResource(if (state.syncing) R.string.syncing else R.string.sync_now))
                             }
                             OutlinedButton(onClick = onPermissions, modifier = Modifier.weight(1f)) {
                                 Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
@@ -171,10 +175,10 @@ fun SyncScreen(
                         }
                         Text(stringResource(R.string.import_body), style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        FilledTonalButton(onClick = onImport) {
+                        FilledTonalButton(onClick = onImport, enabled = !importing) {
                             Icon(Icons.Rounded.FileOpen, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
                             Spacer(Modifier.width(ButtonDefaults.IconSpacing))
-                            Text(stringResource(R.string.import_export))
+                            Text(stringResource(if (importing) R.string.importing else R.string.import_export))
                         }
                     }
                 }

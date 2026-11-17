@@ -101,7 +101,10 @@ data class RingScreenState(
     val ring: RingStatus,
     val listening: Boolean,
     val events: List<RingEvent>,
+    val debugLogging: Boolean = false,
 )
+
+data class DebugState(val enabled: Boolean, val files: Int, val bytes: Long)
 
 enum class TypeStatus { WRITTEN, APP_ONLY, NEEDS_PERMISSION }
 
@@ -113,4 +116,5 @@ data class SyncScreenState(
     val types: List<SyncTypeRow>,
     val stored: Map<Metric, Int>,
     val oldest: LocalDate?,
+    val syncing: Boolean = false,
 )

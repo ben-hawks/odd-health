@@ -83,6 +83,14 @@ fun TodayScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item { StatusRow(state.ring, state.sync, now, onRing, onSync) }
+            if (listOf(state.sleep, state.heartRate, state.hrv, state.spo2, state.activity, state.skin).all { it == null }) {
+                item {
+                    MetricCard(Icons.Rounded.Favorite, stringResource(R.string.no_data_yet)) {
+                        Text(stringResource(R.string.no_data_yet_body), style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
             state.sleep?.let { sleep -> item { SleepCard(sleep) { onOpen(Metric.SLEEP) } } }
             state.heartRate?.let { hr ->
                 item {

@@ -12,7 +12,16 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.oddhealth.app.ui.debug.DebugScreen
+import dev.oddhealth.app.ui.model.DebugState
+import kotlinx.coroutines.flow.Flow
+import java.time.LocalDate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.navigation3.runtime.entryProvider
@@ -35,6 +44,7 @@ sealed interface Dest {
     data object Ring : Dest
     data object Sync : Dest
     data class Detail(val metric: Metric) : Dest
+    data object Debug : Dest
 }
 
 private enum class Tab(val dest: Dest, val label: Int, val selected: ImageVector, val unselected: ImageVector) {
@@ -43,38 +53,44 @@ private enum class Tab(val dest: Dest, val label: Int, val selected: ImageVector
     SYNC(Dest.Sync, R.string.sync, Icons.Rounded.CloudSync, Icons.Outlined.CloudSync),
 }
 
-/** Everything the shell needs; the activity supplies it from view models. */
+/** User actions the shell forwards; the activity supplies them. */
 class AppActions(
     val requestData: () -> Unit = {},
-    val shareLog: () -> Unit = {},
     val setListening: (Boolean) -> Unit = {},
     val syncNow: () -> Unit = {},
     val permissions: () -> Unit = {},
     val importExport: () -> Unit = {},
+    val setDebugLogging: (Boolean) -> Unit = {},
+    val shareDebugLogs: () -> Unit = {},
+    val deleteDebugLogs: () -> Unit = {},
 )
 
 @Composable
 fun AppShell(
-    today: TodayState,
-    ring: RingScreenState,
-    sync: SyncScreenState,
-    detail: (Metric) -> MetricDetailState,
+    today: TodayState?,
+    ring: RingScreenState?,
+    sync: SyncScreenState?,
+    debug: DebugState?,
+    detail: (Metric, LocalDate) -> Flow<MetricDetailState>,
     now: Instant,
     actions: AppActions,
+    importing: Boolean = false,
+    start: Dest = Dest.Today,
 ) {
-    // One back stack: a tab root, optionally with a detail on top.
-    val backStack = remember { mutableStateListOf<Dest>(Dest.Today) }
+    // One back stack: a tab root, optionally with screens on top.
+    val backStack = remember { mutableStateListOf(start) }
     val root = backStack.first()
+    fun goTo(tab: Dest) {
+        backStack.clear()
+        backStack.add(tab)
+    }
     NavigationSuiteScaffold(
         navigationSuiteItems = {
             for (tab in Tab.entries) {
                 val selected = root == tab.dest
                 item(
                     selected = selected,
-                    onClick = {
-                        backStack.clear()
-                        backStack.add(tab.dest)
-                    },
+                    onClick = { goTo(tab.dest) },
                     icon = { Icon(if (selected) tab.selected else tab.unselected, contentDescription = null) },
                     label = { Text(stringResource(tab.label)) },
                 )
@@ -86,26 +102,39 @@ fun AppShell(
             onBack = { if (backStack.size > 1) backStack.removeAt(backStack.lastIndex) },
             entryProvider = entryProvider {
                 entry<Dest.Today> {
-                    TodayScreen(
-                        today, now,
-                        onOpen = { backStack.add(Dest.Detail(it)) },
-                        onRing = { backStack.clear(); backStack.add(Dest.Ring) },
-                        onSync = { backStack.clear(); backStack.add(Dest.Sync) },
-                    )
+                    today?.let {
+                        TodayScreen(
+                            it, now,
+                            onOpen = { m -> backStack.add(Dest.Detail(m)) },
+                            onRing = { goTo(Dest.Ring) },
+                            onSync = { goTo(Dest.Sync) },
+                        )
+                    }
                 }
                 entry<Dest.Ring> {
-                    RingScreen(ring, now, actions.requestData, actions.shareLog, actions.setListening)
+                    ring?.let { RingScreen(it, now, actions.requestData, actions.setListening, onDebug = { backStack.add(Dest.Debug) }) }
                 }
                 entry<Dest.Sync> {
-                    SyncScreen(sync, now, actions.syncNow, actions.permissions, actions.importExport)
+                    sync?.let { SyncScreen(it, now, actions.syncNow, actions.permissions, actions.importExport, importing) }
+                }
+                entry<Dest.Debug> {
+                    debug?.let {
+                        DebugScreen(it, onBack = { backStack.removeAt(backStack.lastIndex) }, actions.setDebugLogging,
+                            actions.shareDebugLogs, actions.deleteDebugLogs)
+                    }
                 }
                 entry<Dest.Detail> { key ->
-                    MetricDetailScreen(
-                        detail(key.metric),
-                        onBack = { backStack.removeAt(backStack.lastIndex) },
-                        onPreviousDay = {},
-                        onNextDay = null,
-                    )
+                    var date by rememberSaveable { mutableStateOf(LocalDate.now()) }
+                    val flow = remember(key.metric, date) { detail(key.metric, date) }
+                    val state by flow.collectAsStateWithLifecycle(initialValue = null)
+                    state?.let {
+                        MetricDetailScreen(
+                            it,
+                            onBack = { backStack.removeAt(backStack.lastIndex) },
+                            onPreviousDay = { date = date.minusDays(1) },
+                            onNextDay = if (date < LocalDate.now()) ({ date = date.plusDays(1) }) else null,
+                        )
+                    }
                 }
             },
         )
