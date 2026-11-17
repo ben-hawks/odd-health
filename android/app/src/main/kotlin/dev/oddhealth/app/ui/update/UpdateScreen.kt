@@ -103,7 +103,8 @@ fun UpdateScreen(
                             when (s) {
                                 UpdateState.Idle -> stringResource(R.string.update_idle)
                                 UpdateState.Checking -> stringResource(R.string.update_checking)
-                                is UpdateState.UpToDate -> stringResource(R.string.update_up_to_date)
+                                is UpdateState.UpToDate -> s.building?.let { stringResource(R.string.update_building, it) }
+                                    ?: stringResource(R.string.update_up_to_date)
                                 is UpdateState.Available -> stringResource(R.string.update_available, s.release.version)
                                 is UpdateState.Downloading -> stringResource(R.string.update_downloading, s.release.version)
                                 is UpdateState.Installing -> stringResource(R.string.update_installing, s.release.version)

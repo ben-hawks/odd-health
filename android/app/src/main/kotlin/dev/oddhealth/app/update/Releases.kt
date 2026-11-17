@@ -1,5 +1,6 @@
 package dev.oddhealth.app.update
 
+import org.json.JSONArray
 import org.json.JSONObject
 
 /** A published release that can be installed. */
@@ -17,12 +18,43 @@ object Releases {
     /** Release asset names, as produced by the release workflow. */
     fun apkName(version: String) = "odd-health-$version.apk"
 
+    /** What GitHub's release list says, for this build. */
+    data class Check(
+        /** The newest release that can be installed: has its APK and checksum. */
+        val installable: Release?,
+        /** A newer version that is published but still has no APK (its build is running). */
+        val building: String?,
+    )
+
     /**
-     * Parse GitHub's "latest release" JSON. Returns null when it has no APK for
-     * its version (e.g. the build is still running).
+     * Read GitHub's release list (newest first). The newest release isn't
+     * always installable yet: its APK is uploaded several minutes after it is
+     * published, so pick the newest one that has its files.
      */
-    fun parse(json: String): Release? {
-        val o = JSONObject(json)
+    fun check(json: String): Check {
+        val list = JSONArray(json)
+        var installable: Release? = null
+        var building: Version? = null
+        for (i in 0 until list.length()) {
+            val o = list.getJSONObject(i)
+            if (o.optBoolean("draft") || o.optBoolean("prerelease")) continue
+            val version = Version.parse(o.optString("tag_name")) ?: continue
+            val release = parse(o)
+            if (release == null) {
+                if (building == null || version > building) building = version
+            } else if (installable == null || version > Version.parse(installable.version)!!) {
+                installable = release
+            }
+        }
+        val installableVersion = installable?.let { Version.parse(it.version) }
+        val stillBuilding = building?.takeIf { installableVersion == null || it > installableVersion }
+        return Check(installable, stillBuilding?.let { "${it.major}.${it.minor}.${it.patch}" })
+    }
+
+    /** Parse one release object. Null when it is a draft or pre-release, or has no APK and checksum yet. */
+    fun parse(json: String): Release? = parse(JSONObject(json))
+
+    fun parse(o: JSONObject): Release? {
         if (o.optBoolean("draft") || o.optBoolean("prerelease")) return null
         val tag = o.getString("tag_name")
         val version = tag.removePrefix("v")
@@ -37,7 +69,8 @@ object Releases {
                 apkName(version) + ".sha256" -> sha = a
             }
         }
-        apk ?: return null
+        // Both files are needed: the checksum is verified before installing.
+        if (apk == null || sha == null) return null
         return Release(
             version = version,
             tag = tag,

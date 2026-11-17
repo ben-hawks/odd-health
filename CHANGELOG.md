@@ -5,6 +5,11 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+- Update check: finds the newest release that has its APK, instead of only
+  the newest release. While a just-published release was still building, the
+  app reported "latest version" and missed the previous one; it now offers the
+  previous one and says the newer one is being prepared.
+
 ## 0.17.0
 
 - "Frequent heart rate" (1 or 5 minutes) is replaced by **Frequent updates**

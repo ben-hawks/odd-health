@@ -26,7 +26,8 @@ import java.time.Instant
 sealed interface UpdateState {
     data object Idle : UpdateState
     data object Checking : UpdateState
-    data class UpToDate(val latest: String) : UpdateState
+    /** [building]: a newer version is published but its APK isn't uploaded yet. */
+    data class UpToDate(val latest: String, val building: String? = null) : UpdateState
     data class Available(val release: Release) : UpdateState
     data class Downloading(val release: Release, val progress: Float) : UpdateState
     data class Installing(val release: Release) : UpdateState
@@ -55,16 +56,18 @@ class UpdateManager(private val context: Context, private val settings: Settings
     suspend fun check(): Release? = mutex.withLock {
         _state.value = UpdateState.Checking
         try {
-            val json = withContext(Dispatchers.IO) { get(latestUrl).decodeToString() }
+            val json = withContext(Dispatchers.IO) { get(releasesUrl).decodeToString() }
             settings.setLastUpdateCheck(Instant.now())
-            val release = Releases.parse(json)
+            val result = Releases.check(json)
+            val release = result.installable
             val current = Version.parse(currentVersion)
             val latest = release?.let { Version.parse(it.version) }
+            val building = result.building?.takeIf { b -> current == null || Version.parse(b)!! > current }
             if (release != null && latest != null && current != null && latest > current) {
                 _state.value = UpdateState.Available(release)
                 release
             } else {
-                _state.value = UpdateState.UpToDate(release?.version ?: currentVersion)
+                _state.value = UpdateState.UpToDate(currentVersion, building)
                 null
             }
         } catch (e: IOException) {
@@ -158,7 +161,8 @@ class UpdateManager(private val context: Context, private val settings: Settings
         }
     }
 
-    private val latestUrl get() = "https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases/latest"
+    /** The newest releases; the first page is plenty to find the newest installable one. */
+    private val releasesUrl get() = "https://api.github.com/repos/${BuildConfig.UPDATE_REPO}/releases?per_page=10"
 
     private fun open(url: String): HttpURLConnection {
         val conn = URL(url).openConnection() as HttpURLConnection

@@ -37,7 +37,27 @@ class UpdateTest {
     }
 
     @Test
+    fun picksTheNewestReleaseThatHasItsFilesWhileANewerOneIsBuilding() {
+        // What GitHub returned at 15:08: v0.17.0 published, its build still running.
+        val list = "[" + listOf(
+            release("v0.17.0", ""),
+            release("v0.16.0", asset("odd-health-0.16.0.apk") + "," + asset("odd-health-0.16.0.apk.sha256")),
+            release("v0.15.0", asset("odd-health-0.15.0.apk") + "," + asset("odd-health-0.15.0.apk.sha256")),
+        ).joinToString(",") + "]"
+        val check = Releases.check(list)
+        assertEquals("0.16.0", check.installable!!.version)
+        assertEquals("0.17.0", check.building)
+    }
+
+    @Test
+    fun nothingIsBuildingWhenTheNewestReleaseHasItsFiles() {
+        val list = "[" + release("v0.16.0", asset("odd-health-0.16.0.apk") + "," + asset("odd-health-0.16.0.apk.sha256")) + "]"
+        assertNull(Releases.check(list).building)
+    }
+
+    @Test
     fun ignoresReleasesWithoutAnApkOrMarkedPrerelease() {
+        assertNull(Releases.parse(release("v0.15.0", asset("odd-health-0.15.0.apk"))))
         assertNull(Releases.parse(release("v0.15.0", asset("notes.txt"))))
         assertNull(Releases.parse(release("v0.15.0", asset("odd-health-0.15.0.apk"), prerelease = true)))
         assertNull(Releases.parse(release("nightly", asset("odd-health-nightly.apk"))))

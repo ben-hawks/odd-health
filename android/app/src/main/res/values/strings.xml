@@ -178,6 +178,7 @@
     <string name="update_idle">Check for a new version</string>
     <string name="update_checking">Checking…</string>
     <string name="update_up_to_date">You have the latest version</string>
+    <string name="update_building">Version %1$s is being prepared. Check again in a few minutes.</string>
     <string name="update_available">Version %1$s is available</string>
     <string name="update_downloading">Downloading %1$s…</string>
     <string name="update_installing">Installing %1$s…</string>
