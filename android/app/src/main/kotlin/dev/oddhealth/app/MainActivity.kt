@@ -34,10 +34,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        // Health Connect opens us to explain permissions; land on the Sync tab then.
+        // Health Connect opens us to explain how data is used; show the About screen then.
         val start = if (intent?.action == "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" ||
             intent?.action == Intent.ACTION_VIEW_PERMISSION_USAGE
-        ) Dest.Sync else Dest.Today
+        ) Dest.About else Dest.Today
 
         setContent {
             OddHealthTheme {
@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
                 val now by vm.now.collectAsStateWithLifecycle()
                 val importing by vm.importing.collectAsStateWithLifecycle()
                 val refreshing by vm.refreshing.collectAsStateWithLifecycle()
+                val noticeAccepted by graph.settings.noticeAccepted.collectAsStateWithLifecycle()
 
                 val btPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
                     if (graph.settings.stayConnected.value) RingService.start(this)
@@ -75,6 +76,8 @@ class MainActivity : ComponentActivity() {
                 AppShell(
                     today = today, ring = ring, sync = sync, debug = debug,
                     detail = vm::detail, now = now, importing = importing, refreshing = refreshing, start = start,
+                    version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty(),
+                    noticeAccepted = noticeAccepted,
                     actions = AppActions(
                         requestData = vm::requestData,
                         setListening = vm::setStayConnected,
@@ -87,6 +90,7 @@ class MainActivity : ComponentActivity() {
                         setDebugLogging = vm::setDebugLogging,
                         shareDebugLogs = { shareDebugLogs() },
                         deleteDebugLogs = vm::deleteDebugLogs,
+                        acceptNotice = graph.settings::acceptNotice,
                     ),
                 )
             }

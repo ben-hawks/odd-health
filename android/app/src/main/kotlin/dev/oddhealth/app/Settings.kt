@@ -28,6 +28,14 @@ class Settings(context: Context) {
         _hrPollMinutes.value = minutes
     }
 
+    private val _noticeAccepted = MutableStateFlow(prefs.getBoolean(NOTICE, false))
+    val noticeAccepted: StateFlow<Boolean> = _noticeAccepted.asStateFlow()
+
+    fun acceptNotice() {
+        prefs.edit().putBoolean(NOTICE, true).apply()
+        _noticeAccepted.value = true
+    }
+
     var firmware: String?
         get() = prefs.getString(FIRMWARE, null)
         set(value) = prefs.edit().putString(FIRMWARE, value).apply()
@@ -53,5 +61,6 @@ class Settings(context: Context) {
         const val LAST_SYNC = "last_sync"
         const val FIRMWARE = "firmware"
         const val HR_POLL = "hr_poll_minutes"
+        const val NOTICE = "notice_accepted_v1"
     }
 }

@@ -67,6 +67,15 @@ class ScreenshotTest {
 
     @Test fun ring() = shot("5-ring") { RingScreen(SampleData.ringScreen, now, {}, {}, {}, {}) }
 
+    @Test fun about() = shot("9-about") { dev.oddhealth.app.ui.about.AboutScreen("0.14.0", onBack = {}) }
+
+    @Test fun firstRun() = shot("10-first-run") {
+        AppShell(
+            SampleData.today, SampleData.ringScreen, SampleData.syncScreen, DebugState(false, 0, 0),
+            detail = { _, _ -> flowOf(SampleData.heartRateDetail) }, now = now, actions = AppActions(), noticeAccepted = false,
+        )
+    }
+
     @Test fun debug() = shot("8-debug") { DebugScreen(DebugState(true, 3, 412_000), {}, {}, {}, {}) }
 
     @Test fun sync() = shot("6-sync") { SyncScreen(SampleData.syncScreen, now, {}, {}, {}) }

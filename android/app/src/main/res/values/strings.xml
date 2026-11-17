@@ -147,4 +147,30 @@
     <string name="share_logs">Share logs</string>
     <string name="delete_logs">Delete logs</string>
     <string name="debug_privacy">Logs contain your health data and your ring\'s Bluetooth address. They stay on this phone until you share or delete them.</string>
+
+    <string name="about_title">About and privacy</string>
+    <string name="about_entry_body">Disclaimers, intended use, and how your data is handled</string>
+    <string name="about_version">Version %1$s</string>
+    <string name="about_medical_title">Not a medical device</string>
+    <string name="about_medical_body">Odd Health and the readings it shows are for general wellness and personal interest only. They are not intended to diagnose, treat, cure, monitor or prevent any disease or condition, and must not replace advice from a qualified health professional. If you feel unwell or are worried about your health, contact a doctor. In an emergency, call your local emergency number.</string>
+    <string name="about_use_title">Intended use</string>
+    <string name="about_use_body">Viewing the data your own Even Realities R1 ring records, keeping a copy on your phone, and sharing it with Health Connect so other wellness apps you choose can use it.</string>
+    <string name="about_not_for_title">Not for</string>
+    <string name="about_not_for_body">• Medical decisions, including starting, stopping or changing any treatment or medication\n• Monitoring anyone\'s health without their knowledge or consent\n• Detecting or alerting on emergencies: the app does not raise alarms, and data can arrive hours late\n• Clinical, research or legal evidence\n• Monitoring of infants, or of anyone whose safety depends on it</string>
+    <string name="about_accuracy_title">About the numbers</string>
+    <string name="about_accuracy_body">The ring reports heart rate, HRV and blood oxygen as hourly averages, so short changes don\'t show. Resting heart rate is an estimate made by this app from those averages, and reads higher than a true resting rate. Temperature is measured at the finger and reads about 1 °C below core temperature. Sleep stages and the sleep score come from the ring\'s own algorithms. This app reads the ring through an unofficial, reverse-engineered protocol: a ring firmware update can change what it sends, and values can be wrong or missing without warning.</string>
+    <string name="about_data_title">Your data</string>
+    <string name="about_data_body">Everything stays on this phone. Odd Health has no account, no servers, no analytics and no ads, and does not request internet access. Data is stored in the app\'s private storage and excluded from cloud backups and device transfers, so uninstalling the app deletes it.\n\nData only leaves the app when you choose to: by writing it to Health Connect, or by sharing debug logs (off by default), which contain health data and your ring\'s Bluetooth address.</string>
+    <string name="about_hc_title">Health Connect</string>
+    <string name="about_hc_body">With your permission, Odd Health writes heart rate, resting heart rate, HRV, blood oxygen, steps, calories, sleep and temperature to Health Connect. It does not read any data from Health Connect. Once written, other apps you allow can read it under their own privacy policies. You can change permissions or delete Odd Health\'s data in Health Connect settings at any time.</string>
+    <string name="about_ring_title">Your ring and the Even app</string>
+    <string name="about_ring_body">Odd Health shares the ring\'s Bluetooth connection with the Even app and only reads data. It never marks data as synced on the ring, never changes ring settings or firmware, and never touches the ring\'s pairing with your glasses. Keep the Even app installed for firmware updates and pairing.</string>
+    <string name="about_affiliation_title">Not affiliated</string>
+    <string name="about_affiliation_body">Odd Health is an independent open-source project. It is not made, endorsed or supported by Even Realities, Google or any device or health-platform maker. Product names belong to their owners.</string>
+    <string name="about_license_title">License</string>
+    <string name="about_license_body">Free software under the GNU General Public License v3.0, provided without any warranty. Source code and documentation: github.com/ben-hawks/odd-health</string>
+    <string name="first_run_title">Before you start</string>
+    <string name="first_run_body">Odd Health is not a medical device. The readings are for general wellness and personal interest only, may be inaccurate or delayed, and must not be used for medical decisions or emergencies.\n\nYour data stays on this phone unless you choose to write it to Health Connect or share debug logs.</string>
+    <string name="first_run_accept">I understand</string>
+    <string name="first_run_more">Read more</string>
 </resources>

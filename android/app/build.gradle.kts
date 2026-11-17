@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -13,17 +15,45 @@ android {
         applicationId = "dev.oddhealth.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 13
-        versionName = "0.13"
+        // Release builds take the version from the git tag: -PversionName=1.2.3
+        // (CI passes it). versionCode is derived from it: 1.2.3 -> 10203.
+        val tagVersion = providers.gradleProperty("versionName").orNull?.removePrefix("v")
+        versionName = tagVersion ?: "0.14.0"
+        versionCode = (tagVersion ?: "0.14.0").split('.', '-').take(3).map { it.toIntOrNull() ?: 0 }
+            .let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
     }
 
-    // A fixed debug key, kept in the repo so every build installs over the last one.
     signingConfigs {
+        // A fixed debug key, kept in the repo so every debug build installs over the last one.
         getByName("debug") {
             storeFile = rootProject.file("debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
+        }
+        // Release key: from android/keystore.properties (git-ignored) or ODD_* environment
+        // variables. See docs/release.md. Without one, release builds are left unsigned.
+        val props = Properties().apply {
+            rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use(::load)
+        }
+        fun setting(key: String, env: String): String? = props.getProperty(key) ?: System.getenv(env)
+        val storePath = setting("storeFile", "ODD_KEYSTORE")
+        if (storePath != null) {
+            create("release") {
+                storeFile = rootProject.file(storePath)
+                storePassword = setting("storePassword", "ODD_KEYSTORE_PASSWORD")
+                keyAlias = setting("keyAlias", "ODD_KEY_ALIAS")
+                keyPassword = setting("keyPassword", "ODD_KEY_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

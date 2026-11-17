@@ -1,5 +1,6 @@
 package dev.oddhealth.app.ui.sync
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.FileOpen
@@ -67,6 +69,7 @@ fun SyncScreen(
     modifier: Modifier = Modifier,
     refreshing: Boolean = false,
     onRefresh: () -> Unit = {},
+    onAbout: () -> Unit = {},
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val ready = state.sync.state == HealthConnectState.READY
@@ -186,6 +189,19 @@ fun SyncScreen(
                             }
                         }
                     }
+                }
+                item {
+                    ListGroup(
+                        items = listOf({
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.about_title)) },
+                                supportingContent = { Text(stringResource(R.string.about_entry_body)) },
+                                trailingContent = { Icon(Icons.Rounded.ChevronRight, contentDescription = null) },
+                                modifier = Modifier.clickable(onClick = onAbout),
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        }),
+                    )
                 }
             }
         }

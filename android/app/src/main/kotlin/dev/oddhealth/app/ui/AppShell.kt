@@ -18,6 +18,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.oddhealth.app.ui.about.AboutScreen
+import dev.oddhealth.app.ui.about.FirstRunNotice
 import dev.oddhealth.app.ui.debug.DebugScreen
 import dev.oddhealth.app.ui.model.DebugState
 import kotlinx.coroutines.flow.Flow
@@ -45,6 +47,7 @@ sealed interface Dest {
     data object Sync : Dest
     data class Detail(val metric: Metric) : Dest
     data object Debug : Dest
+    data object About : Dest
 }
 
 private enum class Tab(val dest: Dest, val label: Int, val selected: ImageVector, val unselected: ImageVector) {
@@ -65,6 +68,7 @@ class AppActions(
     val setDebugLogging: (Boolean) -> Unit = {},
     val shareDebugLogs: () -> Unit = {},
     val deleteDebugLogs: () -> Unit = {},
+    val acceptNotice: () -> Unit = {},
 )
 
 @Composable
@@ -78,11 +82,16 @@ fun AppShell(
     actions: AppActions,
     importing: Boolean = false,
     refreshing: Boolean = false,
+    version: String = "",
+    noticeAccepted: Boolean = true,
     start: Dest = Dest.Today,
 ) {
     // One back stack: a tab root, optionally with screens on top.
     val backStack = remember { mutableStateListOf(start) }
     val root = backStack.first()
+    if (!noticeAccepted && backStack.last() != Dest.About) {
+        FirstRunNotice(onAccept = actions.acceptNotice, onMore = { backStack.add(Dest.About) })
+    }
     fun goTo(tab: Dest) {
         backStack.clear()
         backStack.add(tab)
@@ -122,7 +131,10 @@ fun AppShell(
                 }
                 entry<Dest.Sync> {
                     sync?.let { SyncScreen(it, now, actions.syncNow, actions.permissions, actions.importExport, importing,
-                        refreshing = refreshing, onRefresh = actions.refresh) }
+                        refreshing = refreshing, onRefresh = actions.refresh, onAbout = { backStack.add(Dest.About) }) }
+                }
+                entry<Dest.About> {
+                    AboutScreen(version, onBack = if (backStack.size > 1) ({ backStack.removeAt(backStack.lastIndex) }) else null)
                 }
                 entry<Dest.Debug> {
                     debug?.let {
