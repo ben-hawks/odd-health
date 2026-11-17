@@ -35,28 +35,25 @@ def cmd_frames(args: argparse.Namespace) -> int:
     return 0
 
 
-def frames_in_log(lines):
-    """Yield (line_no, inner_frame_bytes) for every complete frame in a text log.
+# nRF Connect logs every value more than once: a "D" line for the GATT call
+# and an "A" line echoing it, besides the "I" line. Only "I" lines count.
+NRF_ECHO = re.compile(r"^[AD][\t ]")
 
-    Logs often print each value more than once (nRF Connect does, three times
-    for writes), so a value identical to the previous one is skipped.
-    """
+
+def frames_in_log(lines):
+    """Yield (line_no, inner_frame_bytes) for every complete frame in a text log."""
     reasm = p.Reassembler()
     pending = False
-    previous = None
     for no, line in enumerate(lines, 1):
-        if line.startswith("#"):
+        if line.startswith("#") or NRF_ECHO.match(line):
             continue
         runs = HEX_RUN.findall(line)
         if not runs:
             continue
         raw = bytes.fromhex(re.sub(r"[-: ]", "", runs[-1]))
-        if raw == previous:
-            continue
         starts_frame = len(raw) >= 17 and raw[5] == p.MARKER and raw[7] == p.MARKER
         if not (starts_frame or pending):
             continue  # some other hex blob, not a ring frame
-        previous = raw
         try:
             inner = reasm.feed(raw)
         except ValueError as err:

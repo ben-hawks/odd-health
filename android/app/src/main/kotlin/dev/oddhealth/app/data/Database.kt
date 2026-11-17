@@ -77,8 +77,8 @@ interface RecordDao {
     @Query("SELECT * FROM records WHERE kind = :kind ORDER BY start")
     fun byKind(kind: String): Flow<List<RecordRow>>
 
-    @Query("SELECT * FROM records WHERE kind = :kind ORDER BY start DESC LIMIT :limit")
-    suspend fun latest(kind: String, limit: Int): List<RecordRow>
+    @Query("SELECT * FROM records WHERE kind = :kind AND `end` < :before ORDER BY start DESC LIMIT :limit")
+    suspend fun latest(kind: String, before: Long, limit: Int): List<RecordRow>
 
     @Query(
         """SELECT r.* FROM records r LEFT JOIN synced s ON s.key = r.key AND s.target = :target

@@ -89,12 +89,12 @@ class FramingTest(unittest.TestCase):
             "raw=" + raw.hex() + "\n",
         ]
         found = list(frames_in_log(log))
-        self.assertEqual([no for no, _ in found], [2])  # line 3 repeats line 2
+        self.assertEqual([no for no, _ in found], [2, 3])
         self.assertEqual(decode_frame(p.parse_inner(found[0][1])), {"battery_percent": 0x57})
 
-    def test_frames_in_log_dedupes_fragments(self):
+    def test_frames_in_log_skips_nrf_echo_lines(self):
         notifications = ring_frame(2, 5, 1, p.STATUS_PUSH, 9, bytes(range(200)), chunk=60)
-        log = [f"{tag} value: (0x) " + "-".join(f"{b:02X}" for b in n) + "\n"
+        log = [f"{tag}\t00:27:12.179\tvalue: (0x) " + "-".join(f"{b:02X}" for b in n) + "\n"
                for n in notifications for tag in ("I", "A")]
         found = list(frames_in_log(log))
         self.assertEqual(len(found), 1)
@@ -107,6 +107,11 @@ class FramingTest(unittest.TestCase):
             f"2026-11-17T00:27:05.246-06:00\tN\tbae80013\t{raw.hex()}\n",
         ]
         self.assertEqual([no for no, _ in frames_in_log(log)], [2])
+
+    def test_frames_in_log_keeps_repeated_frames(self):
+        raw = ring_frame(1, 0, 0x7F, p.STATUS_PUSH, 59, bytes.fromhex("22020100000000"))[0]
+        line = f"2026-11-17T01:50:59-06:00\tN\tbae80013\t{raw.hex()}\n"
+        self.assertEqual(len(list(frames_in_log([line, line]))), 2)
 
     def test_heartbeat_and_wear(self):
         beat = p.parse_inner(ring_frame(1, 0, 0x7F, p.STATUS_PUSH, 59, bytes.fromhex("22020100000000"))[0][5:])

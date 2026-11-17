@@ -12,8 +12,10 @@ import dev.oddhealth.core.sync.SyncOutcome
 import dev.oddhealth.core.sync.SyncTarget
 import dev.oddhealth.healthconnect.HealthConnectTarget
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,7 +39,24 @@ class SyncManager(
     private val targets: List<SyncTarget> = listOf(healthConnect)
     private val engine = SyncEngine(repository, repository)
     private val mutex = Mutex()
-    private var scheduled: Job? = null
+    /** Sync requests, each carrying how long to wait for more data first. */
+    private val requests = MutableSharedFlow<Long>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+
+    init {
+        // Requests arriving within the delay collapse into one sync. A request
+        // made while a sync is running waits for it rather than cancelling it.
+        @OptIn(FlowPreview::class)
+        scope.launch {
+            requests.debounce { it }.collect {
+                try {
+                    syncNow()
+                } catch (e: Exception) {
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    log.event("Sync failed: $e")
+                }
+            }
+        }
+    }
 
     private val _state = MutableStateFlow(HealthConnectState.NEEDS_PERMISSION)
     val state: StateFlow<HealthConnectState> = _state.asStateFlow()
@@ -73,11 +92,7 @@ class SyncManager(
 
     /** Sync shortly; repeated calls within the delay collapse into one sync. */
     fun syncSoon(delayMillis: Long = 20_000) {
-        scheduled?.cancel()
-        scheduled = scope.launch {
-            delay(delayMillis)
-            syncNow()
-        }
+        requests.tryEmit(delayMillis)
     }
 
     suspend fun syncNow(): List<SyncOutcome> = mutex.withLock {

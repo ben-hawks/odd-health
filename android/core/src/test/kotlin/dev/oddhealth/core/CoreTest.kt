@@ -86,6 +86,19 @@ class CoreTest {
     }
 
     @Test
+    fun exportRecordsAreVersionedWithTheExportTime() {
+        val out = ByteArrayOutputStream()
+        ZipOutputStream(out).use { z ->
+            z.putNextEntry(ZipEntry("Even_health_data/heart_rate.csv").apply { time = 1_700_000_000_000 })
+            z.write("timestamp,value,source,ty\n2026-11-16T22:00:00.000-06:00,106,R1,avg\n".toByteArray())
+            z.closeEntry()
+        }
+        val r = EvenExport.read(ByteArrayInputStream(out.toByteArray()), importedAtMillis = 1_800_000_000_000)
+        // Zip times have 2-second resolution.
+        assertEquals(1_700_000_000_000 / 2000, r.records.single().version / 2000)
+    }
+
+    @Test
     fun ringVitalsBecomeHoursAndALiveReading() {
         val base = 1_794_895_200L // local midnight at -06:00
         val v = Vitals(R1.HEALTH_HEART_RATE, -360, base, 91, base + 100, listOf(HourRecord(0, 80, 95, 70, base)))
@@ -151,7 +164,7 @@ class CoreTest {
             override suspend fun write(records: List<HealthRecord>, context: SyncContext) = WriteResult(records.also { got += it })
         }
         val context = object : SyncContext {
-            override suspend fun history(kind: RecordKind, limit: Int) = emptyList<HealthRecord>()
+            override suspend fun history(kind: RecordKind, limit: Int, before: Instant?) = emptyList<HealthRecord>()
         }
         val engine = SyncEngine(ledger, context)
         engine.sync(target)
@@ -183,7 +196,7 @@ class CoreTest {
             }
         }
         val context = object : SyncContext {
-            override suspend fun history(kind: RecordKind, limit: Int) = emptyList<HealthRecord>()
+            override suspend fun history(kind: RecordKind, limit: Int, before: Instant?) = emptyList<HealthRecord>()
         }
         assertEquals(SyncOutcome.Done("T", 4, 0, 1), SyncEngine(ledger, context, batchSize = 2).sync(target))
     }
@@ -212,7 +225,7 @@ class CoreTest {
             }
         }
         val context = object : SyncContext {
-            override suspend fun history(kind: RecordKind, limit: Int) = emptyList<HealthRecord>()
+            override suspend fun history(kind: RecordKind, limit: Int, before: Instant?) = emptyList<HealthRecord>()
         }
         val engine = SyncEngine(ledger, context, batchSize = 3)
         assertEquals(SyncOutcome.Done("Test", 7, 0, 0), engine.sync(target))

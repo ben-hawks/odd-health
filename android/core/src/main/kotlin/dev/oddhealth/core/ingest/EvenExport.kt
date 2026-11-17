@@ -22,15 +22,26 @@ import java.util.zip.ZipInputStream
 object EvenExport {
     class Result(val records: List<HealthRecord>, val skippedRows: Int)
 
+    /**
+     * Records are versioned with the time the export was made (the newest file
+     * time in the zip), so ring data seen after the export replaces it and ring
+     * data seen before it doesn't. [importedAtMillis] is the fallback when the
+     * zip has no file times.
+     */
     fun read(zip: InputStream, importedAtMillis: Long): Result {
         val files = HashMap<String, List<Map<String, String>>>()
+        var exportedAt = 0L
         ZipInputStream(zip).use { z ->
             while (true) {
                 val entry = z.nextEntry ?: break
                 val name = entry.name.substringAfterLast('/')
-                if (name.endsWith(".csv")) files[name] = Csv.parse(z.readBytes().toString(Charsets.UTF_8))
+                if (name.endsWith(".csv")) {
+                    files[name] = Csv.parse(z.readBytes().toString(Charsets.UTF_8))
+                    if (entry.time > 0) exportedAt = maxOf(exportedAt, entry.time)
+                }
             }
         }
+        val version = if (exportedAt > 0) minOf(exportedAt, importedAtMillis) else importedAtMillis
         require(files.isNotEmpty()) { "No CSV files in this zip. Is it an Even health export?" }
         var skipped = 0
         val out = LinkedHashMap<String, HealthRecord>()
@@ -50,7 +61,7 @@ object EvenExport {
                 val avg = v["avg"] ?: continue
                 if (avg == 0) continue
                 put(
-                    HourlyVital(kind, t.toInstant(), t.offset, v["min"] ?: avg, avg, v["max"] ?: avg, DataSource.EVEN_EXPORT, importedAtMillis),
+                    HourlyVital(kind, t.toInstant(), t.offset, v["min"] ?: avg, avg, v["max"] ?: avg, DataSource.EVEN_EXPORT, version),
                     source == "R1",
                 )
             }
@@ -71,7 +82,7 @@ object EvenExport {
             val active = row["active"]?.toDoubleOrNull()?.toInt()
             // Rows without the resting/active split are partial live pushes; the merged row replaces them.
             put(
-                ActivityBucket(t.toInstant(), t.offset, steps[t to source] ?: 0, active ?: 0, total, DataSource.EVEN_EXPORT, importedAtMillis),
+                ActivityBucket(t.toInstant(), t.offset, steps[t to source] ?: 0, active ?: 0, total, DataSource.EVEN_EXPORT, version),
                 source == "R1" && active != null,
             )
         }
@@ -98,10 +109,10 @@ object EvenExport {
                 stages += SleepStage(RingIngest.stageType(run.first), t, e)
                 t = e
             }
-            val session = SleepSession(start.toInstant(), end.toInstant(), start.offset, stages, null, null, DataSource.EVEN_EXPORT, importedAtMillis)
+            val session = SleepSession(start.toInstant(), end.toInstant(), start.offset, stages, null, null, DataSource.EVEN_EXPORT, version)
             put(session, true)
             if (temp != null) {
-                put(SkinTemperature(session.start, session.end, session.zone, temp, DataSource.EVEN_EXPORT, importedAtMillis), true)
+                put(SkinTemperature(session.start, session.end, session.zone, temp, DataSource.EVEN_EXPORT, version), true)
             }
         }
         return Result(out.values.toList(), skipped)

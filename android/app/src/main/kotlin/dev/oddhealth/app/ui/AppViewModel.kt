@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -122,7 +123,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    val today: StateFlow<TodayState?> = now.map { LocalDate.now() }
+    val today: StateFlow<TodayState?> = now.map { LocalDate.now() }.distinctUntilChanged()
         .flatMapLatest { date -> combine(day(date), graph.ring.status, syncStatus) { d, ring, sync -> UiMapping.today(d, ring, sync) } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 

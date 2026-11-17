@@ -16,6 +16,10 @@ import androidx.compose.runtime.getValue
 import androidx.core.content.FileProvider
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import dev.oddhealth.app.ring.RingService
 import dev.oddhealth.app.ui.AppActions
 import dev.oddhealth.app.ui.AppShell
@@ -81,7 +85,7 @@ class MainActivity : ComponentActivity() {
                         permissions = { hcPermissions.launch(HealthConnectMapping.permissions) },
                         importExport = { pickExport.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) },
                         setDebugLogging = vm::setDebugLogging,
-                        shareDebugLogs = ::shareDebugLogs,
+                        shareDebugLogs = { shareDebugLogs() },
                         deleteDebugLogs = vm::deleteDebugLogs,
                     ),
                 )
@@ -94,9 +98,9 @@ class MainActivity : ComponentActivity() {
         vm.refreshHealthConnect()
     }
 
-    private fun shareDebugLogs() {
-        val zip = graph.debugLog.zip() ?: return
-        val uri = FileProvider.getUriForFile(this, "$packageName.files", zip)
+    private fun shareDebugLogs() = lifecycleScope.launch {
+        val zip = withContext(Dispatchers.IO) { graph.debugLog.zip() } ?: return@launch
+        val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.files", zip)
         val send = Intent(Intent.ACTION_SEND)
             .setType("application/zip")
             .putExtra(Intent.EXTRA_STREAM, uri)

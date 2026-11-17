@@ -45,7 +45,8 @@ data class WriteResult(
 
 /** Read access for targets that need more than the record itself. */
 interface SyncContext {
-    suspend fun history(kind: RecordKind, limit: Int): List<HealthRecord>
+    /** The latest [limit] records of [kind], newest first; only those ending before [before] if given. */
+    suspend fun history(kind: RecordKind, limit: Int, before: java.time.Instant? = null): List<HealthRecord>
 }
 
 /** What has been sent where. */

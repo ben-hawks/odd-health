@@ -96,17 +96,19 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
 
     override suspend fun write(records: List<HealthRecord>, context: SyncContext): WriteResult {
         val c = client ?: return WriteResult(emptyList(), failed = records.associateWith { "Health Connect not available" })
-        var history: List<SkinTemperature>? = null
         val skipped = HashMap<HealthRecord, String>()
         val failed = HashMap<HealthRecord, String>()
         val mapped = ArrayList<Pair<HealthRecord, List<Record>>>()
         val earlyBody = ArrayList<Record>()
         for (r in records) {
             try {
-                if (r is SkinTemperature && history == null) {
-                    history = context.history(RecordKind.SKIN_TEMPERATURE, SkinBaseline.NIGHTS * 8).filterIsInstance<SkinTemperature>()
+                // Each night's baseline comes from the nights just before it.
+                val nights = if (r is SkinTemperature) {
+                    context.history(RecordKind.SKIN_TEMPERATURE, SkinBaseline.NIGHTS + 1, before = r.end).filterIsInstance<SkinTemperature>()
+                } else {
+                    emptyList()
                 }
-                mapped += r to map(r, history.orEmpty())
+                mapped += r to map(r, nights)
             } catch (e: BaselineNotReady) {
                 // The body temperature half doesn't need a baseline.
                 val body = if (canWrite(BodyTemperatureRecord::class)) listOf(bodyTemperature(r as SkinTemperature)) else emptyList()
@@ -131,21 +133,40 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
             }
         }
         val written = ArrayList<HealthRecord>()
-        val all = mapped.flatMap { it.second }
-        try {
-            if (all.isNotEmpty()) c.insertRecords(all)
-            mapped.mapTo(written) { it.first }
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            // One bad record fails the whole batch; retry one by one to find it.
-            for ((r, recs) in mapped) {
-                try {
-                    if (recs.isNotEmpty()) c.insertRecords(recs)
-                    written += r
-                } catch (e: Exception) {
-                    if (e is kotlinx.coroutines.CancellationException) throw e
-                    // Only a value Health Connect rejects is permanent; anything else (rate limits, IPC) is retried.
-                    if (e is IllegalArgumentException) skipped[r] = e.toString() else failed[r] = e.toString()
+        // Insert in chunks of about INSERT_CHUNK Health Connect records: large calls can exceed IPC limits.
+        val chunks = ArrayList<MutableList<Pair<HealthRecord, List<Record>>>>()
+        for (pair in mapped) {
+            val last = chunks.lastOrNull()
+            if (last == null || last.sumOf { it.second.size } + pair.second.size > INSERT_CHUNK) chunks += mutableListOf(pair) else last += pair
+        }
+        var stopped: String? = null
+        for (chunk in chunks) {
+            if (stopped != null) {
+                chunk.forEach { failed[it.first] = stopped!! }
+                continue
+            }
+            val recs = chunk.flatMap { it.second }
+            try {
+                if (recs.isNotEmpty()) c.insertRecords(recs)
+                chunk.mapTo(written) { it.first }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                if (e !is IllegalArgumentException) {
+                    // Rate limits, revoked permissions, IPC trouble: stop and retry everything later.
+                    stopped = e.toString()
+                    chunk.forEach { failed[it.first] = stopped!! }
+                    continue
+                }
+                // A value Health Connect rejects: find which one.
+                for ((r, one) in chunk) {
+                    try {
+                        if (one.isNotEmpty()) c.insertRecords(one)
+                        written += r
+                    } catch (e: Exception) {
+                        if (e is kotlinx.coroutines.CancellationException) throw e
+                        // Only a value Health Connect rejects is permanent; anything else is retried.
+                        if (e is IllegalArgumentException) skipped[r] = e.toString() else failed[r] = e.toString()
+                    }
                 }
             }
         }
@@ -202,7 +223,12 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
             SleepSessionRecord(
                 startTime = r.start, startZoneOffset = r.zone, endTime = r.end, endZoneOffset = r.zone,
                 notes = r.score?.let { "Even R1 sleep score $it" + (r.efficiency?.let { e -> ", efficiency $e%" } ?: "") },
-                stages = r.stages.map { SleepSessionRecord.Stage(it.start, it.end, stage(it.type)) },
+                // Clip stages to the session; Health Connect rejects any that spill outside it.
+                stages = r.stages.mapNotNull {
+                    val from = maxOf(it.start, r.start)
+                    val to = minOf(it.end, r.end)
+                    if (from < to) SleepSessionRecord.Stage(from, to, stage(it.type)) else null
+                },
                 metadata = metadata(r),
             ),
         )
@@ -241,6 +267,8 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
     }
 
     companion object {
+        private const val INSERT_CHUNK = 100
+
         fun sdkStatus(context: Context): Int = HealthConnectClient.getSdkStatus(context)
 
         fun skinTemperatureSupported(client: HealthConnectClient): Boolean =

@@ -87,8 +87,4 @@ fun SyncMarkIcon(mark: SyncMark, modifier: Modifier = Modifier) {
 }
 
 /** Hours and minutes, e.g. 4h 08m. */
-fun formatDuration(seconds: Long): String {
-    val h = seconds / 3600
-    val m = seconds % 3600 / 60
-    return if (h > 0) "%dh %02dm".format(h, m) else "%dm".format(m)
-}
+fun formatDuration(seconds: Long): String = dev.oddhealth.app.ui.model.UiMapping.formatHm(seconds)

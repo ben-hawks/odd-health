@@ -88,6 +88,6 @@ class HealthRepository(private val dao: RecordDao) : SyncLedger, SyncContext {
         if (records.isNotEmpty()) dao.markSynced(records.map { SyncedRow(targetId, it.key, it.version) })
     }
 
-    override suspend fun history(kind: RecordKind, limit: Int): List<HealthRecord> =
-        dao.latest(kind.id, limit).map(RecordCodec::fromRow)
+    override suspend fun history(kind: RecordKind, limit: Int, before: Instant?): List<HealthRecord> =
+        dao.latest(kind.id, before?.epochSecond ?: Long.MAX_VALUE, limit).map(RecordCodec::fromRow)
 }
