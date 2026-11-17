@@ -92,7 +92,8 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
                     written += r
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    if (e is SecurityException || e is android.os.RemoteException) failed[r] = e.toString() else skipped[r] = e.toString()
+                    // Only a value Health Connect rejects is permanent; anything else (rate limits, IPC) is retried.
+                    if (e is IllegalArgumentException) skipped[r] = e.toString() else failed[r] = e.toString()
                 }
             }
         }
