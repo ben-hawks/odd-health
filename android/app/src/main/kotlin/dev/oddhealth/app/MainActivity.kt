@@ -84,7 +84,7 @@ class MainActivity : ComponentActivity() {
                         requestData = vm::requestData,
                         setListening = vm::setStayConnected,
                         refresh = { vm.refresh() },
-                        setHrPoll = vm::setHrPollMinutes,
+                        setFrequentUpdates = vm::setFrequentUpdates,
                         battery = {
                             val unrestricted = vm.ring.value?.batteryUnrestricted == true
                             // Android's own prompt when optimised; the app's settings page otherwise (to change it back).

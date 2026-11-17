@@ -104,7 +104,7 @@ data class RingScreenState(
     val listening: Boolean,
     val events: List<RingEvent>,
     val debugLogging: Boolean = false,
-    val hrPollMinutes: Int = 0,
+    val frequentUpdates: Boolean = false,
     /** Exempt from battery optimisation; null while unknown. */
     val batteryUnrestricted: Boolean? = null,
 )

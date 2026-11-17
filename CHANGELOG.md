@@ -5,6 +5,15 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+## 0.17.0
+
+- "Frequent heart rate" (1 or 5 minutes) is replaced by **Frequent updates**
+  (on/off). The ring takes a heart-rate reading every 9 min 45 s, so the app now
+  asks just after each one is due: every reading is collected with about 6
+  requests an hour instead of 60. Each request also fetches activity, keeping
+  today's steps and calories within about 10 minutes. Anyone who had the old
+  setting on gets the new one on.
+
 ## 0.16.0
 
 - Ring timers (frequent heart rate, the 75-minute fallback request) use alarms

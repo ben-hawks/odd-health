@@ -19,13 +19,16 @@ class Settings(context: Context) {
     private val _lastSync = MutableStateFlow(prefs.getLong(LAST_SYNC, 0).takeIf { it > 0 }?.let(Instant::ofEpochMilli))
     val lastSync: StateFlow<Instant?> = _lastSync.asStateFlow()
 
-    /** Minutes between our own heart-rate requests; 0 = off. */
-    private val _hrPollMinutes = MutableStateFlow(prefs.getInt(HR_POLL, 0))
-    val hrPollMinutes: StateFlow<Int> = _hrPollMinutes.asStateFlow()
+    /**
+     * Ask the ring for each new heart-rate reading and the latest activity.
+     * Defaults to on for anyone who had the old minute-based heart-rate polling on.
+     */
+    private val _frequentUpdates = MutableStateFlow(prefs.getBoolean(FREQUENT, prefs.getInt(HR_POLL_OLD, 0) > 0))
+    val frequentUpdates: StateFlow<Boolean> = _frequentUpdates.asStateFlow()
 
-    fun setHrPollMinutes(minutes: Int) {
-        prefs.edit().putInt(HR_POLL, minutes).apply()
-        _hrPollMinutes.value = minutes
+    fun setFrequentUpdates(on: Boolean) {
+        prefs.edit().putBoolean(FREQUENT, on).apply()
+        _frequentUpdates.value = on
     }
 
     private val _noticeAccepted = MutableStateFlow(prefs.getBoolean(NOTICE, false))
@@ -81,7 +84,8 @@ class Settings(context: Context) {
         const val DEBUG_LOGGING = "debug_logging"
         const val LAST_SYNC = "last_sync"
         const val FIRMWARE = "firmware"
-        const val HR_POLL = "hr_poll_minutes"
+        const val HR_POLL_OLD = "hr_poll_minutes"
+        const val FREQUENT = "frequent_updates"
         const val NOTICE = "notice_accepted_v1"
         const val UPDATE_NOTIFY = "update_notifications"
         const val UPDATE_CHECK = "update_last_check"

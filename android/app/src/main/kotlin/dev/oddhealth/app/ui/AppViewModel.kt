@@ -143,7 +143,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     val ring: StateFlow<RingScreenState?> = combine(
         combine(graph.ring.status, graph.ring.events) { s, e -> s to e },
-        graph.settings.stayConnected, graph.settings.debugLogging, graph.settings.hrPollMinutes, batteryUnrestricted,
+        graph.settings.stayConnected, graph.settings.debugLogging, graph.settings.frequentUpdates, batteryUnrestricted,
     ) { (status, events), stay, debug, poll, battery -> RingScreenState(status, stay, events, debug, poll, battery) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
@@ -283,8 +283,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return BugReport.issueUrl(graph.settings.firmware)
     }
 
-    fun setHrPollMinutes(minutes: Int) {
-        graph.settings.setHrPollMinutes(minutes)
+    fun setFrequentUpdates(on: Boolean) {
+        graph.settings.setFrequentUpdates(on)
         RingService.settingsChanged(getApplication())
     }
 

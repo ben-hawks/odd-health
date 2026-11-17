@@ -68,9 +68,13 @@ Health Connect about 20 seconds after it arrives.
   use** shows whether Android lets the app run freely in the background; tap it
   to allow that if it says "Optimised". It also lets you:
   - turn **Stay connected** off, which stops the background connection;
-  - turn on **Frequent heart rate** (every 5 minutes or every minute) for more
-    than hourly heart-rate data. It uses a little more ring battery. How much
-    detail you get depends on how often the ring itself measures.
+  - turn on **Frequent updates**. The ring takes a heart-rate reading about
+    every 10 minutes (9 min 45 s); with this on, the app collects each one,
+    instead of only the hourly average, and asks for the latest steps and
+    calories at the same time, so today's activity is never more than about
+    10 minutes behind. It asks just after each reading is due, about six
+    times an hour, and uses a little more ring battery. While the phone is
+    asleep Android may delay a request by a few minutes; no readings are lost.
 - **Sync** shows Health Connect status, what is written as which type, and how
   much is stored.
 
@@ -114,7 +118,7 @@ can't be updated this way; uninstall it and install the release instead.
 | Data in Odd Health but not in another app | Check Health Connect settings → Data and access: is Odd Health listed for that type? If it is, the other app may not read that type, or may take a while to refresh. |
 | A type says "waiting to sync" | Grant that permission in **Sync → Permissions**. |
 | Skin temperature says "Not supported" | Your phone's Health Connect doesn't have that type yet; body temperature is still written. |
-| Even app sync seems slower | Turn off **Frequent heart rate**. Both apps share one connection. |
+| Even app sync seems slower | Turn off **Frequent updates**. Both apps share one connection. |
 | Polling or the 75-minute check is late overnight | **Ring → Background battery use** → allow it. Without that, Android delays the app's timers while the phone sleeps. |
 | The connection stops after a while (Samsung, Xiaomi, OnePlus, Huawei and others) | These phones add their own battery savers on top of Android's. Allow background use as above, then also exempt Odd Health in the phone's own settings: Samsung: Settings → Battery → Background usage limits → Never sleeping apps; Xiaomi: app info → Battery saver → No restrictions, and turn on Autostart. [dontkillmyapp.com](https://dontkillmyapp.com) lists the steps for each brand. |
 

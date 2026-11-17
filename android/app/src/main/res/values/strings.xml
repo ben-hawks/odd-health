@@ -52,10 +52,8 @@
     <string name="listen_title">Stay connected</string>
     <string name="listen_body">Keeps a shared connection open alongside the Even app, so every sync is captured</string>
     <string name="firmware">Firmware</string>
-    <string name="hr_poll_title">Frequent heart rate</string>
-    <string name="hr_poll_body">Ask the ring for its latest heart rate between syncs, for more than hourly averages. Uses a little more ring battery.</string>
-    <string name="every_5_min">5 min</string>
-    <string name="every_min">1 min</string>
+    <string name="frequent_title">Frequent updates</string>
+    <string name="frequent_body">Collects each heart-rate reading the ring takes (about every 10 minutes) instead of only hourly averages, and keeps today\'s steps and calories up to date. Uses a little more ring battery.</string>
     <string name="last_data">Last data</string>
     <string name="ago">%1$s ago</string>
     <string name="recent_activity">Recent activity</string>

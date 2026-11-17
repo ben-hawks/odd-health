@@ -112,7 +112,7 @@ object SampleData {
     )
 
     val ringScreen = RingScreenState(
-        ring = ring, listening = true, batteryUnrestricted = true,
+        ring = ring, listening = true, batteryUnrestricted = true, frequentUpdates = true,
         events = listOf(
             RingEvent(LocalTime.of(11, 39), "Heart rate · hours 10–11 · now 84 bpm"),
             RingEvent(LocalTime.of(11, 39), "Activity · 2 buckets · 47 kcal"),

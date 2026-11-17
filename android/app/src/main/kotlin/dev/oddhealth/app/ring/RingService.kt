@@ -32,6 +32,7 @@ import dev.oddhealth.core.ingest.RingIngest
 import dev.oddhealth.r1.DeviceInfo
 import dev.oddhealth.r1.DeviceStatus
 import dev.oddhealth.r1.R1
+import dev.oddhealth.r1.Vitals
 import dev.oddhealth.r1.Reassembler
 import dev.oddhealth.r1.WearStatus
 import dev.oddhealth.r1.decode
@@ -111,7 +112,9 @@ class RingService : Service() {
     private var ready = false
     /** pairAuth sent on this connection. */
     private var sessionOpen = false
-    private var lastHrPoll = 0L
+    private var lastPoll = 0L
+    /** When the ring took its latest heart-rate reading (epoch ms), from its replies. */
+    private var lastHrReading: Long? = null
     private var discovering = false
     private var dataSubscribed: Boolean? = null
     private var lastHealthData = 0L
@@ -167,8 +170,9 @@ class RingService : Service() {
     }
 
     private fun tickInterval(): Long {
-        val poll = graph.settings.hrPollMinutes.value
-        return if (poll > 0) minOf(poll * 60_000L, QUIET_CHECK_MS) else QUIET_CHECK_MS
+        if (!graph.settings.frequentUpdates.value) return QUIET_CHECK_MS
+        val now = System.currentTimeMillis()
+        return (ReadingSchedule.nextPoll(lastHrReading, lastPoll, now) - now).coerceIn(15_000L, QUIET_CHECK_MS)
     }
 
     private fun scheduleTick() {
@@ -177,20 +181,24 @@ class RingService : Service() {
         )
     }
 
-    /** Ask the ring for heart rate if polling is due, or for everything if it has been quiet too long. */
+    /**
+     * Ask for everything if the ring has been quiet too long; otherwise, with
+     * frequent updates on, ask for heart rate and activity when the ring's next
+     * heart-rate reading should be ready.
+     */
     private fun tick() {
         val now = System.currentTimeMillis()
         if (ready && now - lastHealthData > QUIET_LIMIT_MS) {
             graph.ring.event(getString(R.string.event_auto_request))
             requestData()
-            lastHrPoll = now
-        } else {
-            val minutes = graph.settings.hrPollMinutes.value
-            if (minutes > 0 && ready && now - lastHrPoll >= minutes * 60_000L - 30_000) {
-                lastHrPoll = now
-                openSession()
-                send("heartRate request", healthRequest(R1.HEALTH_HEART_RATE, nextSeq()))
-            }
+            lastPoll = now
+        } else if (ready && graph.settings.frequentUpdates.value &&
+            now >= ReadingSchedule.nextPoll(lastHrReading, lastPoll, now) - 5_000
+        ) {
+            lastPoll = now
+            openSession()
+            send("heartRate request", healthRequest(R1.HEALTH_HEART_RATE, nextSeq()))
+            send("activity request", healthRequest(R1.HEALTH_ACTIVITY, nextSeq()))
         }
         scheduleTick()
     }
@@ -348,6 +356,16 @@ class RingService : Service() {
             val decoded = decode(frame)
             val summary = decoded?.let(::describe)
             log("${frame.name} #${frame.seq}" + (summary?.let { " — $it" } ?: if (frame.data.isEmpty()) "" else " — ${frame.data.size} bytes"))
+            if (decoded is Vitals && decoded.cmd == R1.HEALTH_HEART_RATE) {
+                decoded.currentTs?.let { ts ->
+                    val reading = ts * 1000
+                    if (reading != lastHrReading) {
+                        lastHrReading = reading
+                        // Line the next request up with the ring's next reading.
+                        if (graph.settings.frequentUpdates.value) scheduleTick()
+                    }
+                }
+            }
             when (decoded) {
                 is DeviceStatus -> graph.ring.update { it.copy(batteryPercent = decoded.batteryPercent, charging = decoded.chargeState == 1) }
                 is DeviceInfo -> {
@@ -360,7 +378,10 @@ class RingService : Service() {
             if (decoded != null && frame.module == R1.MODULE_HEALTH && frame.status == R1.STATUS_PUSH) {
                 lastHealthData = System.currentTimeMillis()
                 graph.ring.dataReceived()
-                if (!(frame.cmd == R1.HEALTH_HEART_RATE && graph.settings.hrPollMinutes.value > 0)) summary?.let(graph.ring::event)
+                // Frequent updates would fill the activity list; show only other pushes then.
+                val polled = graph.settings.frequentUpdates.value &&
+                    (frame.cmd == R1.HEALTH_HEART_RATE || frame.cmd == R1.HEALTH_ACTIVITY)
+                if (!polled) summary?.let(graph.ring::event)
                 val records = RingIngest.records(decoded, System.currentTimeMillis())
                 if (records.isNotEmpty()) {
                     graph.scope.launch {

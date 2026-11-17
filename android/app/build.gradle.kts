@@ -18,10 +18,10 @@ android {
         // Release builds take the version from the git tag: -PversionName=1.2.3
         // (CI passes it). versionCode is derived from it: 1.2.3 -> 10203.
         val tagVersion = providers.gradleProperty("versionName").orNull?.removePrefix("v")
-        versionName = tagVersion ?: "0.16.0"
+        versionName = tagVersion ?: "0.17.0"
         // GitHub repository whose releases the in-app updater checks.
         buildConfigField("String", "UPDATE_REPO", "\"ben-hawks/odd-health\"")
-        versionCode = (tagVersion ?: "0.16.0").split('.', '-').take(3).map { it.toIntOrNull() ?: 0 }
+        versionCode = (tagVersion ?: "0.17.0").split('.', '-').take(3).map { it.toIntOrNull() ?: 0 }
             .let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
     }
 
