@@ -317,3 +317,19 @@ While charging, the ring pushes deviceStatus every 30 seconds (34 % to 67 %
 in 30 minutes). The phone link dropped and reconnected about 50 times in those
 30 minutes (GATT status 8 and 133) and stayed steady once the ring was back on
 a finger; this appears to be the ring's behaviour on the charger.
+
+## Sleep detail test, 2026-11-17
+
+Looking for more than the nightly temperature. Sent with nRF Connect after
+pairAuth (acked as usual):
+
+| Request | Frame | Reply |
+|---|---|---|
+| sleep detail (health 6, sub-command 2), status 0 (request) | `00b03c1ea2640264014f0006020c003d3e` | none, not even an ack |
+| sleep detail, status 1 (set) | `00f9c33a59640264024f0106020c0018ab` | none |
+| sleep daily (health 6, sub-command 1), status 0 | `0068bdb145640264034f0006010c008816` | ack, no data (night already synced by the Even app) |
+
+The firmware analysis says the sleep-detail, heart-rate-measure and
+SpO2-measure handlers require request-flag bit 1 and reject bit 0, which
+would be status 2. Status 0 and 1 being ignored fits that. Status 2 is
+untested: `001ab047b8640264044f0206020c001229`.
