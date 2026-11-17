@@ -5,6 +5,10 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.HealthConnectFeatures
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BodyTemperatureMeasurementLocation
+import androidx.health.connect.client.records.BodyTemperatureRecord
+import androidx.health.connect.client.records.RestingHeartRateRecord
+import dev.oddhealth.core.model.RestingHeartRate
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
@@ -47,14 +51,28 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
 
     private val device = Device(type = Device.TYPE_RING, manufacturer = "Even Realities", model = "R1")
 
+    /** Whether this phone's Health Connect has the skin temperature type; set by [writableKinds]. */
+    var skinSupported = false
+        private set
+
+    /** Granted write permissions, as of the last [writableKinds] call. */
+    private var granted: Set<String> = emptySet()
+
+    private fun canWrite(type: KClass<out Record>) = HealthPermission.getWritePermission(type) in granted
+
+    private fun canWriteSkin() = skinSupported && canWrite(SkinTemperatureRecord::class)
+
     override suspend fun writableKinds(): Set<RecordKind> {
         val c = client ?: return emptySet()
-        val granted = c.permissionController.getGrantedPermissions()
-        val skinSupported = skinTemperatureSupported(c)
+        granted = c.permissionController.getGrantedPermissions()
+        skinSupported = skinTemperatureSupported(c)
         return HealthConnectMapping.kinds.filterTo(HashSet()) { kind ->
-            val needed = HealthConnectMapping.recordTypes(kind)
-            needed.all { HealthPermission.getWritePermission(it) in granted } &&
-                (kind != RecordKind.SKIN_TEMPERATURE || skinSupported)
+            if (kind == RecordKind.SKIN_TEMPERATURE) {
+                // Nightly temperature goes out as body temperature and, where supported, skin temperature.
+                canWrite(BodyTemperatureRecord::class) || canWriteSkin()
+            } else {
+                HealthConnectMapping.recordTypes(kind).all(::canWrite)
+            }
         }
     }
 
@@ -64,6 +82,7 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
         val skipped = HashMap<HealthRecord, String>()
         val failed = HashMap<HealthRecord, String>()
         val mapped = ArrayList<Pair<HealthRecord, List<Record>>>()
+        val earlyBody = ArrayList<Record>()
         for (r in records) {
             try {
                 if (r is SkinTemperature && history == null) {
@@ -71,11 +90,26 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
                 }
                 mapped += r to map(r, history.orEmpty())
             } catch (e: BaselineNotReady) {
-                // Recent nights wait for a baseline; the first few nights ever never get one.
-                if (r.end < java.time.Instant.now().minus(java.time.Duration.ofDays(3))) skipped[r] = e.message!! else failed[r] = e.message!!
+                // The body temperature half doesn't need a baseline.
+                val body = if (canWrite(BodyTemperatureRecord::class)) listOf(bodyTemperature(r as SkinTemperature)) else emptyList()
+                if (r.end < java.time.Instant.now().minus(java.time.Duration.ofDays(3))) {
+                    // One of the first nights ever: it will never get a baseline. Write what we can and finish.
+                    mapped += r to body
+                } else {
+                    // Recent: write body temperature now, retry skin temperature once there is a baseline.
+                    if (body.isNotEmpty()) earlyBody += body
+                    failed[r] = e.message!!
+                }
             } catch (e: IllegalArgumentException) {
                 // Health Connect rejects values outside its ranges when the record is built.
                 skipped[r] = e.message ?: "invalid value"
+            }
+        }
+        if (earlyBody.isNotEmpty()) {
+            try {
+                c.insertRecords(earlyBody)
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
             }
         }
         val written = ArrayList<HealthRecord>()
@@ -154,10 +188,13 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
                 metadata = metadata(r),
             ),
         )
+        is RestingHeartRate -> listOf(RestingHeartRateRecord(r.start, r.zone, r.bpm.toLong(), metadata(r)))
         is SkinTemperature -> {
+            val body = if (canWrite(BodyTemperatureRecord::class)) listOf(bodyTemperature(r)) else emptyList()
+            if (!canWriteSkin()) return body
             val baseline = SkinBaseline.forNight(r, skinHistory)
                 ?: throw BaselineNotReady("waiting for ${SkinBaseline.MIN_NIGHTS} nights to set a baseline")
-            listOf(
+            body + listOf(
                 SkinTemperatureRecord(
                     startTime = r.start, startZoneOffset = r.zone, endTime = r.end, endZoneOffset = r.zone,
                     deltas = listOf(SkinTemperatureRecord.Delta(r.start, TemperatureDelta.celsius(r.celsius - baseline))),
@@ -168,6 +205,15 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
             )
         }
     }
+
+    /** The nightly finger temperature, stamped at wake-up, measured at the finger. */
+    private fun bodyTemperature(r: SkinTemperature) = BodyTemperatureRecord(
+        time = r.end,
+        zoneOffset = r.zone,
+        temperature = Temperature.celsius(r.celsius),
+        measurementLocation = BodyTemperatureMeasurementLocation.MEASUREMENT_LOCATION_FINGER,
+        metadata = metadata(r, ":body"),
+    )
 
     private fun stage(type: SleepStageType): Int = when (type) {
         SleepStageType.AWAKE -> SleepSessionRecord.STAGE_TYPE_AWAKE
@@ -189,7 +235,7 @@ class HealthConnectTarget(private val context: Context) : SyncTarget {
 object HealthConnectMapping {
     val kinds = listOf(
         RecordKind.HEART_RATE_HOUR, RecordKind.HEART_RATE_READING, RecordKind.HRV_HOUR, RecordKind.SPO2_HOUR,
-        RecordKind.ACTIVITY_BUCKET, RecordKind.SLEEP_SESSION, RecordKind.SKIN_TEMPERATURE,
+        RecordKind.ACTIVITY_BUCKET, RecordKind.SLEEP_SESSION, RecordKind.SKIN_TEMPERATURE, RecordKind.RESTING_HEART_RATE,
     )
 
     fun recordTypes(kind: RecordKind): List<KClass<out Record>> = when (kind) {
@@ -198,7 +244,8 @@ object HealthConnectMapping {
         RecordKind.SPO2_HOUR -> listOf(OxygenSaturationRecord::class)
         RecordKind.ACTIVITY_BUCKET -> listOf(StepsRecord::class, TotalCaloriesBurnedRecord::class, ActiveCaloriesBurnedRecord::class)
         RecordKind.SLEEP_SESSION -> listOf(SleepSessionRecord::class)
-        RecordKind.SKIN_TEMPERATURE -> listOf(SkinTemperatureRecord::class)
+        RecordKind.SKIN_TEMPERATURE -> listOf(SkinTemperatureRecord::class, BodyTemperatureRecord::class)
+        RecordKind.RESTING_HEART_RATE -> listOf(RestingHeartRateRecord::class)
     }
 
     /** Every write permission the app can ask for. */

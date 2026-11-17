@@ -19,6 +19,15 @@ class Settings(context: Context) {
     private val _lastSync = MutableStateFlow(prefs.getLong(LAST_SYNC, 0).takeIf { it > 0 }?.let(Instant::ofEpochMilli))
     val lastSync: StateFlow<Instant?> = _lastSync.asStateFlow()
 
+    /** Minutes between our own heart-rate requests; 0 = off. */
+    private val _hrPollMinutes = MutableStateFlow(prefs.getInt(HR_POLL, 0))
+    val hrPollMinutes: StateFlow<Int> = _hrPollMinutes.asStateFlow()
+
+    fun setHrPollMinutes(minutes: Int) {
+        prefs.edit().putInt(HR_POLL, minutes).apply()
+        _hrPollMinutes.value = minutes
+    }
+
     var firmware: String?
         get() = prefs.getString(FIRMWARE, null)
         set(value) = prefs.edit().putString(FIRMWARE, value).apply()
@@ -43,5 +52,6 @@ class Settings(context: Context) {
         const val DEBUG_LOGGING = "debug_logging"
         const val LAST_SYNC = "last_sync"
         const val FIRMWARE = "firmware"
+        const val HR_POLL = "hr_poll_minutes"
     }
 }

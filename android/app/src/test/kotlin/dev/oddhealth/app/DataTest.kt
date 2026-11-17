@@ -49,11 +49,12 @@ class DataTest {
         assertEquals(2, repo.save(listOf(hr(0, 70, 1), hr(1, 72, 1))))
         assertEquals(0, repo.save(listOf(hr(0, 99, 0))))        // older: ignored
         assertEquals(1, repo.save(listOf(hr(1, 80, 2))))        // newer: replaces
+        assertEquals(0, repo.save(listOf(hr(1, 80, 5))))        // newer but identical: no change
         val pending = repo.pending("hc", setOf(RecordKind.HEART_RATE_HOUR), 10)
         assertEquals(listOf(70, 80), pending.map { (it as HourlyVital).avg })
         repo.markSynced("hc", pending)
         assertEquals(0, repo.pending("hc", setOf(RecordKind.HEART_RATE_HOUR), 10).size)
-        repo.save(listOf(hr(1, 81, 3)))                          // hour still filling up
+        repo.save(listOf(hr(1, 81, 6)))                          // hour still filling up
         assertEquals(1, repo.pendingCount("hc", setOf(RecordKind.HEART_RATE_HOUR)).first())
     }
 
@@ -80,6 +81,20 @@ class DataTest {
         assertEquals(SyncMark.APP_ONLY, detail.rows.last().mark)
     }
 
+    @Test
+    fun restingHeartRateFollowsSleepAndHeartRate() = runBlocking {
+        val start = Instant.parse("2026-11-17T07:00:00Z")
+        val night = SleepSession(start, start.plusSeconds(5 * 3600), cst, emptyList(), null, null, DataSource.RING, 1)
+        repo.save(listOf(night))
+        repo.save((0L..4L).map { HourlyVital(RecordKind.HEART_RATE_HOUR, start.plusSeconds(it * 3600), cst, 50, 60 - it.toInt(), 70, DataSource.RING, 2) })
+        val rhr = repo.byKind(RecordKind.RESTING_HEART_RATE).first().single() as dev.oddhealth.core.model.RestingHeartRate
+        assertEquals(56, rhr.bpm)
+        // A later, lower hour updates the estimate.
+        repo.save(listOf(HourlyVital(RecordKind.HEART_RATE_HOUR, start.plusSeconds(2 * 3600), cst, 45, 52, 60, DataSource.RING, 3)))
+        assertEquals(52, (repo.byKind(RecordKind.RESTING_HEART_RATE).first().single() as dev.oddhealth.core.model.RestingHeartRate).bpm)
+        assertEquals(0, repo.backfillRestingHeartRate()) // already has one
+    }
+
     /** Local check against a real export: ODD_EXPORT=/path/to.zip; prints a summary only. */
     @Test
     fun realExport() = runBlocking {
@@ -94,7 +109,7 @@ class DataTest {
             val day = DayData(date, zone, records, emptyMap(), emptySet(), skins)
             val t = UiMapping.today(day, RingStatus("r", false, null, false, null, null, null), SyncStatus(HealthConnectState.READY, null, 0))
             println("DAY $date sleep=${t.sleep?.let { "${it.bedtime}-${it.wake} ${it.asleep}" }} hr=${t.heartRate?.let { "${it.min}-${it.max} avg ${it.avg}" }} " +
-                "steps=${t.activity?.steps} kcal=${t.activity?.totalKcal} skin=${t.skin}")
+                "rhr=${t.heartRate?.resting} steps=${t.activity?.steps} kcal=${t.activity?.totalKcal} skin=${t.skin}")
         }
     }
 
@@ -115,6 +130,8 @@ class DataTest {
         override fun efficiency() = "eff"
         override fun steps(n: Int) = "$n"
         override fun stepsUnit() = "steps"
+        override fun restingLabel() = "resting"
+        override fun restingDetail() = "est"
         override fun kcal(n: Int, active: Int) = "$n"
     }
 }

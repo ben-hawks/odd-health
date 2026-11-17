@@ -70,6 +70,7 @@ class RingService : Service() {
         /** Ask the ring ourselves when nothing has arrived for this long (the Even app syncs hourly). */
         private const val QUIET_LIMIT_MS = 75 * 60_000L
         private const val QUIET_CHECK_MS = 10 * 60_000L
+        private const val HR_POLL_CHECK_MS = 15_000L
         private val CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         private val SERVICE = UUID.fromString(R1.SERVICE_UUID)
         private val WRITE = UUID.fromString(R1.WRITE_CHAR_UUID)
@@ -98,6 +99,21 @@ class RingService : Service() {
     private var gatt: BluetoothGatt? = null
     private var writeChar: BluetoothGattCharacteristic? = null
     private var ready = false
+    /** pairAuth sent on this connection. */
+    private var sessionOpen = false
+    private var lastHrPoll = 0L
+    private val hrPoll = object : Runnable {
+        override fun run() {
+            val minutes = graph.settings.hrPollMinutes.value
+            val now = System.currentTimeMillis()
+            if (minutes > 0 && ready && now - lastHrPoll >= minutes * 60_000L - 5_000) {
+                lastHrPoll = now
+                openSession()
+                send("heartRate request", healthRequest(R1.HEALTH_HEART_RATE, nextSeq()))
+            }
+            main.postDelayed(this, HR_POLL_CHECK_MS)
+        }
+    }
     private var discovering = false
     private var dataSubscribed: Boolean? = null
     private var lastHealthData = 0L
@@ -138,6 +154,7 @@ class RingService : Service() {
         log("Service started")
         connect()
         main.postDelayed(quietCheck, QUIET_CHECK_MS)
+        main.postDelayed(hrPoll, HR_POLL_CHECK_MS)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -176,6 +193,7 @@ class RingService : Service() {
     private val callback = object : BluetoothGattCallback() {
         override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
             ready = false
+            sessionOpen = false
             discovering = false
             dataSubscribed = null
             writeChar = null
@@ -308,7 +326,7 @@ class RingService : Service() {
             if (decoded != null && frame.module == R1.MODULE_HEALTH && frame.status == R1.STATUS_PUSH) {
                 lastHealthData = System.currentTimeMillis()
                 graph.ring.dataReceived()
-                summary?.let(graph.ring::event)
+                if (!(frame.cmd == R1.HEALTH_HEART_RATE && graph.settings.hrPollMinutes.value > 0)) summary?.let(graph.ring::event)
                 val records = RingIngest.records(decoded, System.currentTimeMillis())
                 if (records.isNotEmpty()) {
                     graph.scope.launch {
@@ -334,12 +352,20 @@ class RingService : Service() {
             return
         }
         graph.ring.event(getString(R.string.event_requested))
-        send("pairAuth", R1.PAIR_AUTH_FRAME)
+        sessionOpen = false
+        openSession()
         send("deviceInfo", systemRequest(R1.SYS_DEVICE_INFO, nextSeq()))
         send("deviceStatus", systemRequest(R1.SYS_DEVICE_STATUS, nextSeq()))
         for (cmd in listOf(R1.HEALTH_HEART_RATE, R1.HEALTH_SPO2, R1.HEALTH_HRV, R1.HEALTH_ACTIVITY, R1.HEALTH_SLEEP)) {
             send("${R1.HEALTH_CMDS[cmd]} request", healthRequest(cmd, nextSeq()))
         }
+    }
+
+    /** pairAuth opens the ring's command session; once per connection is enough. */
+    private fun openSession() {
+        if (sessionOpen) return
+        sessionOpen = true
+        send("pairAuth", R1.PAIR_AUTH_FRAME)
     }
 
     private fun send(label: String, frame: ByteArray) {

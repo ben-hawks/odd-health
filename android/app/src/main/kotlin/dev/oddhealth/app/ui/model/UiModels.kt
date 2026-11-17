@@ -40,6 +40,8 @@ data class VitalSummary(
     val avg: Int,
     val max: Int,
     val hours: List<HourRange>,
+    /** Estimated resting heart rate from last night (heart rate only). */
+    val resting: Int? = null,
 )
 
 data class ActivitySummary(
@@ -102,6 +104,7 @@ data class RingScreenState(
     val listening: Boolean,
     val events: List<RingEvent>,
     val debugLogging: Boolean = false,
+    val hrPollMinutes: Int = 0,
 )
 
 data class DebugState(val enabled: Boolean, val files: Int, val bytes: Long)

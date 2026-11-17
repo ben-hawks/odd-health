@@ -99,7 +99,8 @@ fun TodayScreen(
                             BigValue((hr.latest ?: hr.avg).toString(), stringResource(R.string.unit_bpm))
                             Spacer(Modifier.weight(1f))
                             Text(
-                                stringResource(R.string.range_today, hr.min, hr.max),
+                                hr.resting?.let { stringResource(R.string.resting_range_today, it, hr.min, hr.max) }
+                                    ?: stringResource(R.string.range_today, hr.min, hr.max),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(bottom = 8.dp),

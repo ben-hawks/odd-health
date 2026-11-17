@@ -31,6 +31,9 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -58,6 +61,7 @@ fun RingScreen(
     now: Instant,
     onRequestData: () -> Unit,
     onListeningChange: (Boolean) -> Unit,
+    onHrPollChange: (Int) -> Unit,
     onDebug: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -132,6 +136,27 @@ fun RingScreen(
                                 headlineContent = { Text(stringResource(R.string.listen_title)) },
                                 supportingContent = { Text(stringResource(R.string.listen_body)) },
                                 trailingContent = { Switch(checked = state.listening, onCheckedChange = onListeningChange) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        },
+                        {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.hr_poll_title)) },
+                                supportingContent = {
+                                    Column(verticalArrangement = Arrangement.spacedBy(Space.s)) {
+                                        Text(stringResource(R.string.hr_poll_body))
+                                        val options = listOf(0 to R.string.off, 5 to R.string.every_5_min, 1 to R.string.every_min)
+                                        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                                            options.forEachIndexed { i, (minutes, label) ->
+                                                SegmentedButton(
+                                                    selected = state.hrPollMinutes == minutes,
+                                                    onClick = { onHrPollChange(minutes) },
+                                                    shape = SegmentedButtonDefaults.itemShape(i, options.size),
+                                                ) { Text(stringResource(label)) }
+                                            }
+                                        }
+                                    }
+                                },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                             )
                         },

@@ -34,6 +34,7 @@ enum class RecordKind(val id: String) {
     ACTIVITY_BUCKET("act"),
     SLEEP_SESSION("sleep"),
     SKIN_TEMPERATURE("skin"),
+    RESTING_HEART_RATE("rhr"),
     ;
 
     companion object {

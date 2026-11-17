@@ -95,6 +95,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         override fun efficiency() = s(R.string.efficiency)
         override fun steps(n: Int) = s(R.string.n_steps, n)
         override fun stepsUnit() = s(R.string.unit_steps)
+        override fun restingLabel() = s(R.string.resting_hr)
+        override fun restingDetail() = s(R.string.resting_hr_detail)
         override fun kcal(n: Int, active: Int) = s(R.string.kcal_line, n, active)
     }
 
@@ -122,19 +124,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun detail(metric: Metric, date: LocalDate): Flow<MetricDetailState> = day(date).map { UiMapping.detail(metric, it, words) }
 
     val ring: StateFlow<RingScreenState?> = combine(
-        graph.ring.status, graph.ring.events, graph.settings.stayConnected, graph.settings.debugLogging,
-    ) { status, events, stay, debug -> RingScreenState(status, stay, events, debug) }
+        graph.ring.status, graph.ring.events, graph.settings.stayConnected, graph.settings.debugLogging, graph.settings.hrPollMinutes,
+    ) { status, events, stay, debug, poll -> RingScreenState(status, stay, events, debug, poll) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val sync: StateFlow<SyncScreenState?> = combine(
-        syncStatus, graph.sync.writable, repo.counts(), repo.oldest(), graph.sync.syncing,
-    ) { status, writable, counts, oldest, syncing ->
+        combine(syncStatus, graph.sync.skinSupported) { a, b -> a to b }, graph.sync.writable, repo.counts(), repo.oldest(), graph.sync.syncing,
+    ) { (status, skinSupported), writable, counts, oldest, syncing ->
         fun st(kind: RecordKind) = if (kind in writable) TypeStatus.WRITTEN else TypeStatus.NEEDS_PERMISSION
         val s = { id: Int -> app.getString(id) }
         SyncScreenState(
             sync = status,
             types = listOf(
                 SyncTypeRow(s(R.string.heart_rate), s(R.string.hc_heart_rate), st(RecordKind.HEART_RATE_HOUR), s(R.string.t_hr)),
+                SyncTypeRow(s(R.string.resting_hr), s(R.string.resting_hr), st(RecordKind.RESTING_HEART_RATE), s(R.string.t_rhr)),
                 SyncTypeRow(s(R.string.t_hr_range), null, TypeStatus.APP_ONLY, s(R.string.t_hr_range_note)),
                 SyncTypeRow(s(R.string.hrv), s(R.string.hc_hrv), st(RecordKind.HRV_HOUR), s(R.string.t_hourly_avg_rmssd)),
                 SyncTypeRow(s(R.string.spo2), s(R.string.hc_spo2), st(RecordKind.SPO2_HOUR), s(R.string.t_hourly_avg)),
@@ -142,7 +145,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 SyncTypeRow(s(R.string.t_calories), s(R.string.hc_calories), st(RecordKind.ACTIVITY_BUCKET), s(R.string.t_10min)),
                 SyncTypeRow(s(R.string.sleep), s(R.string.hc_sleep), st(RecordKind.SLEEP_SESSION), null),
                 SyncTypeRow(s(R.string.t_sleep_score), null, TypeStatus.APP_ONLY, s(R.string.t_sleep_score_note)),
-                SyncTypeRow(s(R.string.skin_temperature), s(R.string.skin_temperature), st(RecordKind.SKIN_TEMPERATURE), s(R.string.t_skin)),
+                SyncTypeRow(s(R.string.t_body_temp), s(R.string.hc_body_temp), st(RecordKind.SKIN_TEMPERATURE), s(R.string.t_body_temp_note)),
+                if (skinSupported || graph.sync.state.value != HealthConnectState.READY) {
+                    SyncTypeRow(s(R.string.skin_temperature), s(R.string.skin_temperature), st(RecordKind.SKIN_TEMPERATURE), s(R.string.t_skin))
+                } else {
+                    SyncTypeRow(s(R.string.skin_temperature), null, TypeStatus.APP_ONLY, s(R.string.t_skin_unsupported))
+                },
             ),
             stored = counts.entries.groupBy({ metricOf(it.key) }, { it.value }).mapValues { it.value.sum() },
             oldest = oldest?.atZone(ZoneId.systemDefault())?.toLocalDate(),
@@ -157,7 +165,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private fun metricOf(kind: RecordKind) = when (kind) {
-        RecordKind.HEART_RATE_HOUR, RecordKind.HEART_RATE_READING -> Metric.HEART_RATE
+        RecordKind.HEART_RATE_HOUR, RecordKind.HEART_RATE_READING, RecordKind.RESTING_HEART_RATE -> Metric.HEART_RATE
         RecordKind.HRV_HOUR -> Metric.HRV
         RecordKind.SPO2_HOUR -> Metric.SPO2
         RecordKind.ACTIVITY_BUCKET -> Metric.ACTIVITY
@@ -185,6 +193,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         graph.settings.setStayConnected(on)
         if (on) RingService.start(getApplication()) else RingService.stop(getApplication())
     }
+
+    fun setHrPollMinutes(minutes: Int) = graph.settings.setHrPollMinutes(minutes)
 
     fun setDebugLogging(on: Boolean) {
         graph.settings.setDebugLogging(on)

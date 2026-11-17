@@ -13,8 +13,8 @@ android {
         applicationId = "dev.oddhealth.app"
         minSdk = 31
         targetSdk = 36
-        versionCode = 10
-        versionName = "0.10"
+        versionCode = 11
+        versionName = "0.11"
     }
 
     // A fixed debug key, kept in the repo so every build installs over the last one.

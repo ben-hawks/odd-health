@@ -107,6 +107,20 @@ class CoreTest {
     }
 
     @Test
+    fun restingHeartRateIsLowestHourlyAverageDuringMainSleep() {
+        val start = Instant.parse("2026-11-17T07:00:00Z")
+        val night = SleepSession(start, start.plusSeconds(4 * 3600 + 1200), cst, emptyList(), null, null, DataSource.RING, 2)
+        fun hour(h: Long, avg: Int) = HourlyVital(RecordKind.HEART_RATE_HOUR, start.plusSeconds(h * 3600), cst, avg - 3, avg, avg + 3, DataSource.RING, 1)
+        val hours = listOf(hour(-1, 40), hour(0, 62), hour(1, 55), hour(2, 58), hour(4, 50), hour(5, 45))
+        // hour -1 is before sleep, hour 4 is only 20 minutes inside it, hour 5 after it
+        val rhr = dev.oddhealth.core.model.RestingHeartRateEstimate.forNight(night, hours)!!
+        assertEquals(55, rhr.bpm)
+        assertEquals(night.end, rhr.start)
+        val nap = night.copy(end = start.plusSeconds(3600))
+        assertNull(dev.oddhealth.core.model.RestingHeartRateEstimate.forNight(nap, hours))
+    }
+
+    @Test
     fun skinBaselineIsMedianOfEarlierNights() {
         fun night(day: Long, c: Double) =
             SkinTemperature(Instant.ofEpochSecond(day * 86400), Instant.ofEpochSecond(day * 86400 + 28800), cst, c, DataSource.RING, 1)

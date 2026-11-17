@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
                     actions = AppActions(
                         requestData = vm::requestData,
                         setListening = vm::setStayConnected,
+                        setHrPoll = vm::setHrPollMinutes,
                         syncNow = { vm.syncNow() },
                         // Launched directly from the tap, as Android 14+ requires.
                         permissions = { hcPermissions.launch(HealthConnectMapping.permissions) },

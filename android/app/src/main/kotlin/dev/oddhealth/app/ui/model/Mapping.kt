@@ -5,6 +5,7 @@ import dev.oddhealth.core.model.HealthRecord
 import dev.oddhealth.core.model.HeartRateReading
 import dev.oddhealth.core.model.HourlyVital
 import dev.oddhealth.core.model.RecordKind
+import dev.oddhealth.core.model.RestingHeartRate
 import dev.oddhealth.core.model.SkinBaseline
 import dev.oddhealth.core.model.SkinTemperature
 import dev.oddhealth.core.model.SleepSession
@@ -42,6 +43,9 @@ class DayData(
         records.filterIsInstance<SleepSession>().filter { it.end >= dayStart && it.end < dayEnd }
             .maxByOrNull { it.end.epochSecond - it.start.epochSecond }
 
+    val resting: RestingHeartRate? get() =
+        records.filterIsInstance<RestingHeartRate>().filter { it.start >= dayStart && it.start < dayEnd }.maxByOrNull { it.start }
+
     val skin: SkinTemperature? get() = night?.let { n -> records.filterIsInstance<SkinTemperature>().firstOrNull { it.start == n.start } }
 
     fun mark(r: HealthRecord): SyncMark =
@@ -68,6 +72,8 @@ interface Words {
     fun efficiency(): String
     fun steps(n: Int): String
     fun stepsUnit(): String
+    fun restingLabel(): String
+    fun restingDetail(): String
     fun kcal(n: Int, active: Int): String
 }
 
@@ -85,6 +91,7 @@ object UiMapping {
             avg = hours.map { it.avg }.average().roundToInt(),
             max = hours.maxOf { it.max },
             hours = hours.map { HourRange(day.hourOf(it.start), it.min, it.avg, it.max) },
+            resting = if (kind == RecordKind.HEART_RATE_HOUR) day.resting?.bpm else null,
         )
     }
 
@@ -163,7 +170,11 @@ object UiMapping {
                     headlineUnit = unit,
                     caption = if (metric == Metric.HEART_RATE) w.hrCaption(v.avg, v.latest, v.latestAt?.format(hm)) else w.rangeCaption(v.min, v.max, unit),
                     vital = v,
-                    rows = (hourRows + liveRows).sortedByDescending { it.first }.map { it.second },
+                    rows = listOfNotNull(
+                        day.resting?.takeIf { metric == Metric.HEART_RATE }?.let {
+                            DetailRow(w.restingLabel(), "${it.bpm} $unit", w.restingDetail(), day.mark(it))
+                        },
+                    ) + (hourRows + liveRows).sortedByDescending { it.first }.map { it.second },
                     appOnlyNote = if (metric == Metric.HEART_RATE) w.hrNote() else null,
                 )
             }

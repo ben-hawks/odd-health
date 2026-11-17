@@ -58,7 +58,7 @@ class ScreenshotTest {
 
     @Test fun sleep() = shot("4-sleep") { MetricDetailScreen(SampleData.sleepDetail, {}, {}, null) }
 
-    @Test fun ring() = shot("5-ring") { RingScreen(SampleData.ringScreen, now, {}, {}, {}) }
+    @Test fun ring() = shot("5-ring") { RingScreen(SampleData.ringScreen, now, {}, {}, {}, {}) }
 
     @Test fun debug() = shot("8-debug") { DebugScreen(DebugState(true, 3, 412_000), {}, {}, {}, {}) }
 

@@ -46,6 +46,9 @@ class SyncManager(
     private val _writable = MutableStateFlow<Set<RecordKind>>(emptySet())
     val writable: StateFlow<Set<RecordKind>> = _writable.asStateFlow()
 
+    private val _skinSupported = MutableStateFlow(true)
+    val skinSupported: StateFlow<Boolean> = _skinSupported.asStateFlow()
+
     private val _syncing = MutableStateFlow(false)
     val syncing: StateFlow<Boolean> = _syncing.asStateFlow()
 
@@ -55,6 +58,7 @@ class SyncManager(
             HealthConnectClient.SDK_AVAILABLE -> {
                 val kinds = healthConnect.writableKinds()
                 _writable.value = kinds
+                _skinSupported.value = healthConnect.skinSupported
                 if (kinds.isEmpty()) HealthConnectState.NEEDS_PERMISSION else HealthConnectState.READY
             }
             HealthConnectClient.SDK_UNAVAILABLE_PROVIDER_UPDATE_REQUIRED -> HealthConnectState.NOT_INSTALLED

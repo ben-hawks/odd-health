@@ -9,6 +9,7 @@ import dev.oddhealth.app.sync.SyncManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /** App-wide singletons, created once in [OddHealthApp]. */
 class AppGraph(app: Application) {
@@ -28,6 +29,9 @@ class OddHealthApp : Application() {
     override fun onCreate() {
         super.onCreate()
         graph = AppGraph(this)
+        graph.scope.launch {
+            if (graph.repository.backfillRestingHeartRate() > 0) graph.sync.syncSoon(5_000)
+        }
     }
 }
 

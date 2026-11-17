@@ -36,23 +36,28 @@ data class SyncedRow(val target: String, val key: String, val version: Long)
 
 data class KindCount(val kind: String, val n: Int)
 
-data class KeyVersion(val key: String, val version: Long)
-
 @Dao
 interface RecordDao {
-    @Query("SELECT key, version FROM records WHERE key IN (:keys)")
-    suspend fun versions(keys: List<String>): List<KeyVersion>
+    @Query("SELECT * FROM records WHERE key IN (:keys)")
+    suspend fun existing(keys: List<String>): List<RecordRow>
 
     @Upsert
     suspend fun upsert(rows: List<RecordRow>)
 
-    /** Store rows that are new or newer than what is stored; returns how many were. */
+    /**
+     * Store rows that are new, or newer and different from what is stored;
+     * returns how many were. A newer copy with the same values is ignored, so
+     * repeated polls of a finished hour don't trigger another sync.
+     */
     @Transaction
     suspend fun upsertNewer(rows: List<RecordRow>): Int {
         var changed = 0
         for (chunk in rows.chunked(500)) {
-            val have = versions(chunk.map { it.key }).associate { it.key to it.version }
-            val newer = chunk.filter { (have[it.key] ?: Long.MIN_VALUE) < it.version }
+            val have = existing(chunk.map { it.key }).associateBy { it.key }
+            val newer = chunk.filter { row ->
+                val old = have[row.key]
+                old == null || (old.version < row.version && old.copy(version = 0, source = "") != row.copy(version = 0, source = ""))
+            }
             if (newer.isNotEmpty()) upsert(newer)
             changed += newer.size
         }
@@ -61,6 +66,13 @@ interface RecordDao {
 
     @Query("SELECT * FROM records WHERE start >= :from AND start < :to ORDER BY start")
     fun range(from: Long, to: Long): Flow<List<RecordRow>>
+
+    /** Records of [kind] overlapping [from]..[to]. */
+    @Query("SELECT * FROM records WHERE kind = :kind AND `end` > :from AND start < :to ORDER BY start")
+    suspend fun overlapping(kind: String, from: Long, to: Long): List<RecordRow>
+
+    @Query("SELECT * FROM records WHERE kind = :kind ORDER BY start")
+    suspend fun byKindOnce(kind: String): List<RecordRow>
 
     @Query("SELECT * FROM records WHERE kind = :kind ORDER BY start")
     fun byKind(kind: String): Flow<List<RecordRow>>

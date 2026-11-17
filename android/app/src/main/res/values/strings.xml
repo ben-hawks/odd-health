@@ -17,6 +17,7 @@
     <string name="unit_bpm">bpm</string>
     <string name="unit_ms">ms</string>
     <string name="unit_steps">steps</string>
+    <string name="resting_range_today">Resting %1$d · %2$d–%3$d today</string>
     <string name="range_today">%1$d–%2$d today</string>
     <string name="kcal_line">%1$d kcal · %2$d active</string>
     <string name="vs_baseline">%1$s °C vs your baseline</string>
@@ -51,6 +52,10 @@
     <string name="listen_title">Stay connected</string>
     <string name="listen_body">Keeps a shared connection open alongside the Even app, so every sync is captured</string>
     <string name="firmware">Firmware</string>
+    <string name="hr_poll_title">Frequent heart rate</string>
+    <string name="hr_poll_body">Ask the ring for its latest heart rate between syncs, for more than hourly averages. Uses a little more ring battery.</string>
+    <string name="every_5_min">5 min</string>
+    <string name="every_min">1 min</string>
     <string name="last_data">Last data</string>
     <string name="ago">%1$s ago</string>
     <string name="recent_activity">Recent activity</string>
@@ -97,7 +102,14 @@
     <string name="sleep_score">Sleep score</string>
     <string name="efficiency">Efficiency</string>
     <string name="n_steps">%1$d steps</string>
-    <string name="note_hr">Hourly minimum and maximum are shown here only. Health Connect gets the hourly average and each live reading.</string>
+    <string name="note_hr">Hourly minimum and maximum are shown here only. Health Connect gets the hourly average, each live reading, and the resting heart rate estimate.</string>
+    <string name="resting_hr">Resting heart rate</string>
+    <string name="resting_hr_detail">Estimated: lowest hourly average during last night\'s sleep</string>
+    <string name="t_rhr">Estimated: lowest hourly average during sleep</string>
+    <string name="t_body_temp">Nightly temperature</string>
+    <string name="hc_body_temp">Body temperature (finger)</string>
+    <string name="t_body_temp_note">Measured at the finger, so about 1 °C below core temperature</string>
+    <string name="t_skin_unsupported">Not supported by Health Connect on this phone</string>
     <string name="note_sleep">Health Connect has no field for the sleep score or efficiency; they are added to the session\'s notes.</string>
     <string name="note_skin">Health Connect stores the change from your baseline: the median of your previous 30 nights.</string>
 
