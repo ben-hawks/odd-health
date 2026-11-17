@@ -92,6 +92,13 @@ class FramingTest(unittest.TestCase):
         self.assertEqual([no for no, _ in found], [2, 3])
         self.assertEqual(decode_frame(p.parse_inner(found[0][1])), {"battery_percent": 0x57})
 
+    def test_device_status_and_info(self):
+        status = p.parse_inner(ring_frame(1, 0, 1, p.STATUS_ACK, 3, bytes([80, 2, 1, 0, 0, 0, 0]))[0][5:])
+        self.assertEqual(decode_frame(status), {"battery_percent": 80, "charge_state": "not_charging"})
+        info = p.parse_inner(ring_frame(1, 0, 2, p.STATUS_ACK, 4,
+                                        b"2.2.6.0009".ljust(16, b"\0") + b"603MV1.9.3".ljust(16, b"\0"))[0][5:])
+        self.assertEqual(decode_frame(info), {"firmware": "2.2.6.0009", "hardware": "603MV1.9.3"})
+
 
 class DecodeTest(unittest.TestCase):
     # Published payload vectors from not-benny/hermes-g2 (pre-clock-sync, so unanchored).

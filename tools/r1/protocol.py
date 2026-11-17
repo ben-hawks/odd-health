@@ -32,15 +32,18 @@ HEALTH_CMDS = {1: "heartRate", 2: "spo2", 3: "temperature", 4: "hrv", 5: "activi
 HEALTH_SUBCMDS = {1: "daily", 2: "point", 3: "measure"}
 SYSTEM_SUBCMDS = {
     0x01: "deviceStatus", 0x02: "deviceInfo", 0x03: "wearStatus", 0x04: "userInfo",
-    0x05: "systemTime", 0x08: "pairAuth", 0x09: "otaStart", 0x0A: "advStart",
+    0x05: "systemTime", 0x07: "touchSwitch", 0x08: "pairAuth", 0x09: "otaStart", 0x0A: "advStart",
     0x0B: "getAlgoKeyStatus", 0x0C: "setAlgoKey", 0x0E: "healthSettingsStatus",
-    0x0F: "systemSettingsStatus", 0x11: "nvRecover", 0x12: "powerControl",
-    0x13: "pairDelete", 0x7E: "packetAck", 0x7F: "heartbeatPack",
+    0x0F: "systemSettingsStatus", 0x10: "deviceSerial", 0x11: "nvRecover",
+    0x12: "powerControl", 0x13: "pairDelete", 0x7E: "packetAck", 0x7F: "heartbeatPack",
+    0x82: "removeRingNotify",
 }
 
-# System sub-commands that change pairing, firmware, keys, NVM or power state.
+# System sub-commands that change pairing, firmware, keys, NVM or power state,
+# or the ring's link to the glasses (0x07 switches the glasses touch source,
+# 0x0A and 0x82 rewrite or erase the stored glasses addresses).
 # build_frame() refuses them; reading health data never needs them.
-DANGEROUS_SYSTEM_SUBCMDS = frozenset({0x09, 0x0A, 0x0C, 0x11, 0x12, 0x13})
+DANGEROUS_SYSTEM_SUBCMDS = frozenset({0x07, 0x09, 0x0A, 0x0C, 0x11, 0x12, 0x13, 0x82})
 
 # The official app's session-open frame, captured verbatim (seq=1, data=0x01).
 PAIR_AUTH_FRAME = bytes.fromhex("00971953f964016401000000080d003f0101")

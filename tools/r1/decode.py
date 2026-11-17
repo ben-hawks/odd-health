@@ -7,6 +7,11 @@ import struct
 from .protocol import MODULE_HEALTH, MODULE_SYSTEM, Frame
 
 SLEEP_STAGES = {0: "awake", 1: "rem", 2: "light", 3: "deep"}
+CHARGE_STATES = {1: "charging", 2: "not_charging", 3: "full"}
+
+
+def _ascii(raw: bytes) -> str:
+    return raw.split(b"\0")[0].decode("ascii", "replace")
 
 
 def _day_anchor(tz_min: int, day_base: int) -> bool:
@@ -95,7 +100,13 @@ def decode_frame(frame: Frame) -> dict | None:
             return decode_sleep(d)
     if frame.module == MODULE_SYSTEM and frame.cmd == 0 and d:
         if frame.sub_cmd == 0x01:
-            return {"battery_percent": d[0]}
+            out = {"battery_percent": d[0]}
+            if len(d) > 1:
+                out["charge_state"] = CHARGE_STATES.get(d[1], d[1])
+            return out
         if frame.sub_cmd == 0x02:
-            return {"firmware": d[:16].split(b"\0")[0].decode("ascii", "replace")}
+            out = {"firmware": _ascii(d[:16])}
+            if len(d) >= 32:
+                out["hardware"] = _ascii(d[16:32])
+            return out
     return None

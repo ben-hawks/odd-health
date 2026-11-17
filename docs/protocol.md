@@ -19,9 +19,10 @@ next step; see [capture-guide.md](capture-guide.md).
 
 - The ring must already be bonded to the phone by the official Even app. The
   link is encrypted; there is no application-level secret.
-- The ring serves **one command session at a time**. If the Even app is running
+- The ring serves **one phone session at a time**. If the Even app is running
   it holds the session and a second client's commands time out. Force-stop the
-  Even app before connecting.
+  Even app before connecting. The glasses use a separate link; see
+  [ring-and-glasses.md](ring-and-glasses.md).
 - Request MTU 247 after service discovery, before subscribing.
 
 Service `bae80001-4f05-4503-8e65-3af1f7329d1f`:
@@ -88,16 +89,17 @@ System (`module=1`, `cmd=0`), selected by sub-command:
 
 | sub | Name | Notes |
 |---:|---|---|
-| 0x01 | deviceStatus | response `data[0]` = battery percent |
-| 0x02 | deviceInfo | response starts with 16-byte NUL-padded firmware version |
+| 0x01 | deviceStatus | response `[battery percent][state: 1 charging, 2 not charging, 3 full]…` |
+| 0x02 | deviceInfo | response: two 16-byte NUL-padded strings, firmware then hardware version |
 | 0x05 | systemTime | status 2, data `[tz offset minutes i16 LE][epoch seconds u32 LE]` |
 | 0x08 | pairAuth | status 0, data `01`; opens the session; ring acks with data `00` |
 | 0x0E | healthSettingsStatus | set: `[epoch u32 LE][01][19 zero bytes]` enables tracking |
 | 0x7E | packetAck | status 1, see below |
 
-**Never send** 0x09 otaStart, 0x0A advStart, 0x0C setAlgoKey, 0x11 nvRecover,
-0x12 powerControl, 0x13 pairDelete. They change firmware, pairing, keys, stored
-data or power state. `tools/r1/protocol.py` refuses to build them.
+**Never send** 0x07 touchSwitch, 0x09 otaStart, 0x0A advStart, 0x0C setAlgoKey,
+0x11 nvRecover, 0x12 powerControl, 0x13 pairDelete, 0x82 removeRingNotify. They
+change firmware, pairing, keys, stored data, power state or the ring's link to
+the glasses. `tools/r1/protocol.py` refuses to build them.
 
 ### Session
 
@@ -112,7 +114,9 @@ The official app also sends healthSettingsStatus and systemTime each session.
 A ring that the Even app syncs regularly already has both set.
 
 **Open:** how many days the ring keeps, and whether the packetAck loop walks
-back through all of them. Our export has a third source label, `ring1MultiData`,
+back through all of them. Firmware analysis suggests about a day of offline
+storage and an automatic push every 3 hours while a phone session is open; see
+[ring-and-glasses.md](ring-and-glasses.md#storage-on-the-ring). Our export has a third source label, `ring1MultiData`,
 on activity rows, which is the app's name for multi-packet history batches.
 
 ## Payloads

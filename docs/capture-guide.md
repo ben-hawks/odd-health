@@ -39,6 +39,9 @@ Every health push in `decoded.jsonl` includes a `packet_ack_hex`. Writing it
 back should make the ring send its next stored batch; try this for one metric
 and note how far back the data goes.
 
+While nRF Connect is still connected, also run the gesture and coexistence
+checks in [ring-and-glasses.md](ring-and-glasses.md#test-on-real-hardware).
+
 The default frames only read. `frames --with-setup` adds the clock sync and
 health-enable writes the official app sends; leave them out unless the decoded
 records come back without timestamps.
