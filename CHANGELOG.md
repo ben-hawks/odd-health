@@ -5,6 +5,12 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+- Ring timers (frequent heart rate, the 75-minute fallback request) use alarms
+  that still fire while the phone sleeps, instead of stalling in Doze.
+- Ring tab: "Background battery use" shows whether the app is exempt from
+  battery optimisation and opens Android's prompt to allow it.
+- User guide: troubleshooting for manufacturer battery savers.
+
 ## 0.15.0
 
 - App updates: check GitHub releases, download, verify the checksum and

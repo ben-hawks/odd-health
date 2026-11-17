@@ -2,6 +2,7 @@ package dev.oddhealth.app.ring
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlarmManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -23,6 +24,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.SystemClock
 import dev.oddhealth.app.MainActivity
 import dev.oddhealth.app.R
 import dev.oddhealth.app.graph
@@ -70,7 +72,8 @@ class RingService : Service() {
         /** Ask the ring ourselves when nothing has arrived for this long (the Even app syncs hourly). */
         private const val QUIET_LIMIT_MS = 75 * 60_000L
         private const val QUIET_CHECK_MS = 10 * 60_000L
-        private const val HR_POLL_CHECK_MS = 15_000L
+        private const val ACTION_TICK = "dev.oddhealth.app.TICK"
+        private const val ACTION_RESCHEDULE = "dev.oddhealth.app.RESCHEDULE"
         private val CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         private val SERVICE = UUID.fromString(R1.SERVICE_UUID)
         private val WRITE = UUID.fromString(R1.WRITE_CHAR_UUID)
@@ -88,6 +91,13 @@ class RingService : Service() {
             context.stopService(Intent(context, RingService::class.java))
         }
 
+        /** Apply a changed polling setting to the running service. */
+        fun settingsChanged(context: Context) {
+            if (canRun(context) && context.graph.ring.running.value) {
+                context.startForegroundService(Intent(context, RingService::class.java).setAction(ACTION_RESCHEDULE))
+            }
+        }
+
         fun requestData(context: Context) {
             if (canRun(context)) context.startForegroundService(Intent(context, RingService::class.java).setAction(ACTION_REQUEST))
         }
@@ -102,18 +112,6 @@ class RingService : Service() {
     /** pairAuth sent on this connection. */
     private var sessionOpen = false
     private var lastHrPoll = 0L
-    private val hrPoll = object : Runnable {
-        override fun run() {
-            val minutes = graph.settings.hrPollMinutes.value
-            val now = System.currentTimeMillis()
-            if (minutes > 0 && ready && now - lastHrPoll >= minutes * 60_000L - 5_000) {
-                lastHrPoll = now
-                openSession()
-                send("heartRate request", healthRequest(R1.HEALTH_HEART_RATE, nextSeq()))
-            }
-            main.postDelayed(this, HR_POLL_CHECK_MS)
-        }
-    }
     private var discovering = false
     private var dataSubscribed: Boolean? = null
     private var lastHealthData = 0L
@@ -123,15 +121,6 @@ class RingService : Service() {
         log("Other data from the ring (not health): $otherBatches transfers, $otherBytes bytes")
         otherBatches = 0
         otherBytes = 0
-    }
-    private val quietCheck = object : Runnable {
-        override fun run() {
-            if (ready && System.currentTimeMillis() - lastHealthData > QUIET_LIMIT_MS) {
-                graph.ring.event(getString(R.string.event_auto_request))
-                requestData()
-            }
-            main.postDelayed(this, QUIET_CHECK_MS)
-        }
     }
 
     // Sequence numbers for our own frames, kept away from the Even app's low numbers.
@@ -153,17 +142,62 @@ class RingService : Service() {
         graph.ring.setRunning(true)
         log("Service started")
         connect()
-        main.postDelayed(quietCheck, QUIET_CHECK_MS)
-        main.postDelayed(hrPoll, HR_POLL_CHECK_MS)
+        scheduleTick()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent?.action == ACTION_REQUEST) requestData()
+        when (intent?.action) {
+            ACTION_REQUEST -> requestData()
+            ACTION_TICK -> tick()
+            ACTION_RESCHEDULE -> scheduleTick()
+        }
         return START_STICKY
+    }
+
+    // --- timers ----------------------------------------------------------------
+    // Alarms rather than Handler delays: Handler time stops while the phone is in
+    // deep sleep, so polling would stall overnight. Allow-while-idle alarms still
+    // fire in Doze, at most about every 9 minutes there.
+
+    private val tickIntent by lazy {
+        PendingIntent.getForegroundService(
+            this, 0, Intent(this, RingService::class.java).setAction(ACTION_TICK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+    }
+
+    private fun tickInterval(): Long {
+        val poll = graph.settings.hrPollMinutes.value
+        return if (poll > 0) minOf(poll * 60_000L, QUIET_CHECK_MS) else QUIET_CHECK_MS
+    }
+
+    private fun scheduleTick() {
+        getSystemService(AlarmManager::class.java).setAndAllowWhileIdle(
+            AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + tickInterval(), tickIntent,
+        )
+    }
+
+    /** Ask the ring for heart rate if polling is due, or for everything if it has been quiet too long. */
+    private fun tick() {
+        val now = System.currentTimeMillis()
+        if (ready && now - lastHealthData > QUIET_LIMIT_MS) {
+            graph.ring.event(getString(R.string.event_auto_request))
+            requestData()
+            lastHrPoll = now
+        } else {
+            val minutes = graph.settings.hrPollMinutes.value
+            if (minutes > 0 && ready && now - lastHrPoll >= minutes * 60_000L - 30_000) {
+                lastHrPoll = now
+                openSession()
+                send("heartRate request", healthRequest(R1.HEALTH_HEART_RATE, nextSeq()))
+            }
+        }
+        scheduleTick()
     }
 
     override fun onDestroy() {
         main.removeCallbacksAndMessages(null)
+        getSystemService(AlarmManager::class.java).cancel(tickIntent)
         // close() drops only this app's use of the link; the Even app keeps its own.
         gatt?.close()
         gatt = null

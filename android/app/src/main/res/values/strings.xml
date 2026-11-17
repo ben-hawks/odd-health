@@ -207,4 +207,8 @@
     <string name="report_footer">Nothing is sent until you submit the form on GitHub. The log file stays in Downloads until you delete it.</string>
     <string name="report_saved">Saved %1$s to Downloads. Attach it in the form.</string>
     <string name="report_save_failed">Couldn\'t save the log: %1$s</string>
+
+    <string name="battery_usage">Background battery use</string>
+    <string name="battery_unrestricted">Unrestricted: the connection and polling run on time</string>
+    <string name="battery_optimised">Optimised: Android may delay polling while the phone sleeps. Tap to allow background use.</string>
 </resources>

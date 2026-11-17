@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.TripOrigin
 import androidx.compose.material3.Button
@@ -64,6 +65,7 @@ fun RingScreen(
     onListeningChange: (Boolean) -> Unit,
     onHrPollChange: (Int) -> Unit,
     onDebug: () -> Unit,
+    onBattery: () -> Unit = {},
     modifier: Modifier = Modifier,
     refreshing: Boolean = false,
     onRefresh: () -> Unit = {},
@@ -161,6 +163,29 @@ fun RingScreen(
                                             }
                                         }
                                     },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                )
+                            },
+                            {
+                                ListItem(
+                                    headlineContent = { Text(stringResource(R.string.battery_usage)) },
+                                    supportingContent = {
+                                        Text(
+                                            when (state.batteryUnrestricted) {
+                                                true -> stringResource(R.string.battery_unrestricted)
+                                                false -> stringResource(R.string.battery_optimised)
+                                                null -> ""
+                                            },
+                                        )
+                                    },
+                                    trailingContent = {
+                                        if (state.batteryUnrestricted == false) {
+                                            Icon(Icons.Rounded.BatteryAlert, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                        } else {
+                                            Icon(Icons.Rounded.ChevronRight, contentDescription = null)
+                                        }
+                                    },
+                                    modifier = Modifier.clickable(onClick = onBattery),
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                                 )
                             },

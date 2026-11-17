@@ -133,9 +133,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun detail(metric: Metric, date: LocalDate): Flow<MetricDetailState> = day(date).map { UiMapping.detail(metric, it, words) }
 
+    private val batteryUnrestricted = MutableStateFlow<Boolean?>(null)
+
+    /** Re-read the battery optimisation exemption; called on resume. */
+    fun refreshBattery() {
+        val app = getApplication<Application>()
+        batteryUnrestricted.value = app.getSystemService(android.os.PowerManager::class.java).isIgnoringBatteryOptimizations(app.packageName)
+    }
+
     val ring: StateFlow<RingScreenState?> = combine(
-        graph.ring.status, graph.ring.events, graph.settings.stayConnected, graph.settings.debugLogging, graph.settings.hrPollMinutes,
-    ) { status, events, stay, debug, poll -> RingScreenState(status, stay, events, debug, poll) }
+        combine(graph.ring.status, graph.ring.events) { s, e -> s to e },
+        graph.settings.stayConnected, graph.settings.debugLogging, graph.settings.hrPollMinutes, batteryUnrestricted,
+    ) { (status, events), stay, debug, poll, battery -> RingScreenState(status, stay, events, debug, poll, battery) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val sync: StateFlow<SyncScreenState?> = combine(
@@ -274,7 +283,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return BugReport.issueUrl(graph.settings.firmware)
     }
 
-    fun setHrPollMinutes(minutes: Int) = graph.settings.setHrPollMinutes(minutes)
+    fun setHrPollMinutes(minutes: Int) {
+        graph.settings.setHrPollMinutes(minutes)
+        RingService.settingsChanged(getApplication())
+    }
 
     fun setDebugLogging(on: Boolean) {
         graph.settings.setDebugLogging(on)

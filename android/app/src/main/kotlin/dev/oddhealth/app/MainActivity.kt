@@ -85,6 +85,14 @@ class MainActivity : ComponentActivity() {
                         setListening = vm::setStayConnected,
                         refresh = { vm.refresh() },
                         setHrPoll = vm::setHrPollMinutes,
+                        battery = {
+                            val unrestricted = vm.ring.value?.batteryUnrestricted == true
+                            // Android's own prompt when optimised; the app's settings page otherwise (to change it back).
+                            startActivity(
+                                if (unrestricted) Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:$packageName"))
+                                else Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, android.net.Uri.parse("package:$packageName")),
+                            )
+                        },
                         syncNow = { vm.syncNow() },
                         // Launched directly from the tap, as Android 14+ requires.
                         permissions = { hcPermissions.launch(HealthConnectMapping.permissions) },
@@ -114,6 +122,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         vm.refreshHealthConnect()
+        vm.refreshBattery()
     }
 
     private fun shareDebugLogs() = lifecycleScope.launch {

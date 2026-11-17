@@ -64,7 +64,9 @@ Health Connect about 20 seconds after it arrives.
 
 - **Today** shows the current day; tap a card to see that metric by day, with
   each value marked: in Health Connect, waiting to sync, or kept in this app only.
-- **Ring** shows connection, battery and recent activity, and lets you:
+- **Ring** shows connection, battery and recent activity. **Background battery
+  use** shows whether Android lets the app run freely in the background; tap it
+  to allow that if it says "Optimised". It also lets you:
   - turn **Stay connected** off, which stops the background connection;
   - turn on **Frequent heart rate** (every 5 minutes or every minute) for more
     than hourly heart-rate data. It uses a little more ring battery. How much
@@ -113,6 +115,8 @@ can't be updated this way; uninstall it and install the release instead.
 | A type says "waiting to sync" | Grant that permission in **Sync → Permissions**. |
 | Skin temperature says "Not supported" | Your phone's Health Connect doesn't have that type yet; body temperature is still written. |
 | Even app sync seems slower | Turn off **Frequent heart rate**. Both apps share one connection. |
+| Polling or the 75-minute check is late overnight | **Ring → Background battery use** → allow it. Without that, Android delays the app's timers while the phone sleeps. |
+| The connection stops after a while (Samsung, Xiaomi, OnePlus, Huawei and others) | These phones add their own battery savers on top of Android's. Allow background use as above, then also exempt Odd Health in the phone's own settings: Samsung: Settings → Battery → Background usage limits → Never sleeping apps; Xiaomi: app info → Battery saver → No restrictions, and turn on Autostart. [dontkillmyapp.com](https://dontkillmyapp.com) lists the steps for each brand. |
 
 ### Reporting a problem
 

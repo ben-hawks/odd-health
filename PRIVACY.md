@@ -89,6 +89,7 @@ Realities' own privacy policy.
 | Notifications | For the ongoing notification shown while connected to the ring |
 | Run in the foreground (connected device) | To stay connected to the ring in the background |
 | Run at startup | To reconnect after the phone restarts, if "Stay connected" is on |
+| Ask to ignore battery optimisations | To show Android's "allow background use" prompt from the Ring tab; you decide |
 | Internet | Update checks and downloads from GitHub only |
 | Install apps | To install a downloaded update (Android asks you to allow it once, then to confirm each install) |
 | Health Connect: write heart rate, resting heart rate, HRV, oxygen saturation, steps, total and active calories, sleep, body and skin temperature | To write your data to Health Connect |

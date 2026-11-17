@@ -68,6 +68,7 @@ class AppActions(
     val setListening: (Boolean) -> Unit = {},
     val refresh: () -> Unit = {},
     val setHrPoll: (Int) -> Unit = {},
+    val battery: () -> Unit = {},
     val syncNow: () -> Unit = {},
     val permissions: () -> Unit = {},
     val importExport: () -> Unit = {},
@@ -137,7 +138,7 @@ fun AppShell(
                     }
                 }
                 entry<Dest.Ring> {
-                    ring?.let { RingScreen(it, now, actions.requestData, actions.setListening, actions.setHrPoll, onDebug = { backStack.add(Dest.Debug) },
+                    ring?.let { RingScreen(it, now, actions.requestData, actions.setListening, actions.setHrPoll, onDebug = { backStack.add(Dest.Debug) }, onBattery = actions.battery,
                         refreshing = refreshing, onRefresh = actions.refresh) }
                 }
                 entry<Dest.Sync> {
