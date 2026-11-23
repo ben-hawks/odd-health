@@ -5,6 +5,8 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+## 0.18.0
+
 - Ring checks (Ring → Debugging): a read-only test of everything the app
   reads from the ring (session, device info, battery, each health type's
   reply and value ranges, reading interval, the ignored temperature request,
