@@ -21,15 +21,22 @@ This is the real test: can a client other than the Even app read the ring.
 2. Install **nRF Connect for Mobile**. Open it, find the ring under the bonded
    devices, connect.
 3. Request MTU 247 (connection menu → Request MTU).
-4. Open service `bae80001-…` and enable notifications on `bae80013` and
-   `bae80011`. If the icon already shows them as enabled, leave it alone:
-   tapping it again turns notifications off for the Even app too.
+4. Open service `bae80001-…` and enable notifications on `bae80013` only.
+   If the icon already shows them as enabled, leave it alone: tapping it again
+   turns notifications off for the Even app too. Do not touch `bae80011`
+   (the glasses channel); writing its descriptor dropped the link in testing.
 5. On a computer run `python3 tools/r1tool.py frames`. It prints one hex frame
    per line.
 6. In nRF Connect write each frame to `bae80012`, in order, as a byte array,
    using write type "command" / "without response". Start with `pairAuth` and
    check that a notification comes back on `bae80013` before continuing.
 7. Save the nRF Connect log as text into `captures/`.
+
+   To test a single command instead, `python3 tools/r1tool.py request MODULE
+   CMD SUB_CMD [--status N]` prints pairAuth and one frame. Its sequence number
+   is `0x7E00` by default, outside the Even app's and Odd Health's ranges, so
+   any ack carrying `00 7e` at inner bytes 3–4 is the reply to it. If Odd
+   Health is running, its own polls (`…4f…`) can appear in the same log.
 8. Decode and check against a fresh export taken the same day:
 
    ```

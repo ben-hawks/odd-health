@@ -104,6 +104,20 @@ the glasses. `tools/r1/protocol.py` refuses to build them.
 Every request gets an ack (status 3, same sequence number, usually no data).
 Data follows as separate pushes (status 2) numbered by the ring's own counter.
 
+**Sequence numbers.** The ring echoes the request's sequence number in its
+ack, so the number is how a reply is matched to whoever sent it while several
+clients share the link:
+
+| Range | Used by |
+|---|---|
+| low numbers, counting up | Even app; the ring's own pushes |
+| `0x4F00`–`0x4FFF` | Odd Health (wraps within the range) |
+| `0x7E00`–`0x7EFF` | manual tests (`tools/r1tool.py frames` and `request`) |
+
+In a log, bytes 3–4 of the inner frame (after the 5-byte fragment header) are
+the sequence number, little-endian: `…64 02 64 00 7e 03…` is the ack to test
+frame `0x7E00`.
+
 1. Write the pairAuth frame; wait for its ack on `bae80013`.
 2. Optionally deviceInfo, deviceStatus.
 3. One daily request per metric, about 200 ms apart.
@@ -336,3 +350,13 @@ would be status 2. Status 0 and 1 being ignored fits that, but status 2
 seconds the log covered. Sleep detail looks unavailable to a phone client, so
 the nightly value inside the sleep record remains the only temperature the
 ring hands out.
+
+Notifications that did arrive right after the status-2 frame (12:45:09–10)
+were not replies to it: they were Odd Health's own Frequent-updates poll,
+running in the background on the same link, with heart-rate request `0x4F2F`
+and activity request `0x4F30` acked and followed by their pushes. A reply to
+the sleep-detail frame would have started `64 02 64 04 4f 03 06 02`. The test
+frames above used sequence numbers `0x4F01`–`0x4F04`, inside Odd Health's
+range, which is why the replies were hard to tell apart; test frames now use
+`0x7E00`–`0x7EFF` (see [Session](#session)). To repeat the status-2 test:
+`python3 tools/r1tool.py request 2 6 2 --status 2`.

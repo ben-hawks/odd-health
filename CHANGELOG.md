@@ -5,6 +5,8 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+## 0.17.1
+
 - Ring tab shows whether the ring is on your finger, not being worn, or on the
   charger (wear states confirmed by testing). The ring only re-checks wear at
   some moments, so a short removal may not show.
@@ -19,6 +21,11 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
   the newest release. While a just-published release was still building, the
   app reported "latest version" and missed the previous one; it now offers the
   previous one and says the newer one is being prepared.
+
+- Protocol tools: manual test frames use their own sequence range
+  (0x7E00–0x7EFF) so their replies can't be confused with the app's polls;
+  new `r1tool.py request` builds a single test frame. Protocol notes record
+  the sleep-detail test results.
 
 ## 0.17.0
 

@@ -26,6 +26,14 @@ HEADER_LEN = 12
 MODULE_SYSTEM, MODULE_HEALTH, MODULE_SPORT = 1, 2, 3
 STATUS_REQ, STATUS_SET, STATUS_PUSH, STATUS_ACK = 0, 1, 2, 3
 
+# Sequence numbers. The Even app and the ring count up from low numbers and
+# Odd Health uses 0x4F00-0x4FFF, so a reply can be matched to its sender.
+# Frames built here for manual tests use their own range, so a test reply is
+# never mistaken for one of Odd Health's own polls (or the other way round).
+APP_SEQ_RANGE = range(0x4F00, 0x5000)
+TEST_SEQ_BASE = 0x7E00
+TEST_SEQ_RANGE = range(TEST_SEQ_BASE, TEST_SEQ_BASE + 0x100)
+
 MODULES = {1: "system", 2: "health", 3: "sport"}
 STATUSES = {0: "req", 1: "set", 2: "push", 3: "ack"}
 HEALTH_CMDS = {1: "heartRate", 2: "spo2", 3: "temperature", 4: "hrv", 5: "activity", 6: "sleep"}
@@ -197,7 +205,7 @@ def session_frames(epoch_sec: int, tz_offset_min: int, setup: bool = False) -> l
     official app makes each session: enable health tracking and sync the clock.
     """
     out = [("pairAuth", PAIR_AUTH_FRAME)]
-    seq = 2
+    seq = TEST_SEQ_BASE
 
     def add(label: str, module: int, cmd: int, sub: int, status: int, data: bytes = b"") -> None:
         nonlocal seq

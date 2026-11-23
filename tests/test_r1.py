@@ -58,6 +58,12 @@ class FramingTest(unittest.TestCase):
             self.assertNotIn((frame.module, frame.sub_cmd),
                              {(1, s) for s in p.DANGEROUS_SYSTEM_SUBCMDS})
 
+    def test_test_frames_stay_out_of_the_app_range(self):
+        for _, raw in p.session_frames(1_800_000_000, -360, setup=True)[1:]:
+            seq = p.parse_inner(raw[5:]).seq
+            self.assertIn(seq, p.TEST_SEQ_RANGE)
+            self.assertNotIn(seq, p.APP_SEQ_RANGE)
+
     def test_fragment_reassembly(self):
         data = bytes(range(200))
         notifications = ring_frame(2, 5, 1, p.STATUS_PUSH, 9, data, chunk=60)

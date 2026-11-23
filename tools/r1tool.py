@@ -35,6 +35,20 @@ def cmd_frames(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_request(args: argparse.Namespace) -> int:
+    seq = args.seq
+    if seq not in p.TEST_SEQ_RANGE:
+        print(f"# warning: seq 0x{seq:04X} is outside the test range "
+              f"0x{p.TEST_SEQ_RANGE.start:04X}-0x{p.TEST_SEQ_RANGE.stop - 1:04X}", file=sys.stderr)
+    data = bytes.fromhex(args.data)
+    frame = p.build_frame(args.module, args.cmd, args.sub_cmd, args.status, seq, data)
+    print(f"# write to {p.WRITE_CHAR_UUID} (write without response) after pairAuth")
+    print(f"# seq 0x{seq:04X}: a reply to this frame carries bytes {seq & 0xFF:02x} {seq >> 8:02x} at inner offset 3")
+    print(f"pairAuth               {p.PAIR_AUTH_FRAME.hex()}")
+    print(f"request                {frame.hex()}")
+    return 0
+
+
 # nRF Connect logs every value more than once: a "D" line for the GATT call
 # and an "A" line echoing it, besides the "I" line. Only "I" lines count.
 NRF_ECHO = re.compile(r"^[AD][\t ]")
@@ -162,9 +176,19 @@ def main() -> int:
                    help="also emit the healthEnable and systemTime writes the official app sends")
     f.add_argument("--tz-offset-min", type=int, help="UTC offset in minutes (default: this machine's)")
     f.set_defaults(fn=cmd_frames)
+    r = sub.add_parser("request", help="build one frame for a manual test")
+    r.add_argument("module", type=lambda v: int(v, 0), help="1 system, 2 health")
+    r.add_argument("cmd", type=lambda v: int(v, 0))
+    r.add_argument("sub_cmd", type=lambda v: int(v, 0))
+    r.add_argument("--status", type=int, default=p.STATUS_REQ, choices=range(4),
+                   help="0 request (default), 1 set, 2 push")
+    r.add_argument("--seq", type=lambda v: int(v, 0), default=p.TEST_SEQ_BASE,
+                   help=f"sequence number (default 0x{p.TEST_SEQ_BASE:04X}; keep within the test range)")
+    r.add_argument("--data", default="", help="payload as hex")
+    r.set_defaults(fn=cmd_request)
     d = sub.add_parser("decode")
     d.add_argument("log", help="text log containing hex frames (nRF Connect export, logcat, ...) or -")
-    d.add_argument("--ack-seq", type=int, default=100, help="sequence number for generated packetAck frames")
+    d.add_argument("--ack-seq", type=lambda v: int(v, 0), default=p.TEST_SEQ_BASE + 0x80, help="sequence number for generated packetAck frames")
     d.set_defaults(fn=cmd_decode)
     c = sub.add_parser("compare")
     c.add_argument("decoded", help="output of `decode`")
