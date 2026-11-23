@@ -20,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.oddhealth.app.ui.about.AboutScreen
 import dev.oddhealth.app.ui.about.FirstRunNotice
+import dev.oddhealth.app.ring.CheckResult
+import dev.oddhealth.app.ui.debug.CheckDialog
 import dev.oddhealth.app.ui.debug.DebugScreen
 import dev.oddhealth.app.ui.report.ReportScreen
 import dev.oddhealth.app.ui.update.UpdateScreen
@@ -80,6 +82,10 @@ class AppActions(
     val installUpdate: () -> Unit = {},
     val setUpdateNotifications: (Boolean) -> Unit = {},
     val reportBug: (Boolean) -> Unit = {},
+    val runChecks: () -> Unit = {},
+    val showChecks: () -> Unit = {},
+    val dismissChecks: () -> Unit = {},
+    val shareChecks: () -> Unit = {},
 )
 
 @Composable
@@ -97,7 +103,10 @@ fun AppShell(
     version: String = "",
     noticeAccepted: Boolean = true,
     start: Dest = Dest.Today,
+    /** The ring-check results to show in a popup, or null. */
+    checkDialog: CheckResult? = null,
 ) {
+    checkDialog?.let { CheckDialog(it, onDismiss = actions.dismissChecks, onShare = actions.shareChecks) }
     // One back stack: a tab root, optionally with screens on top.
     val backStack = remember { mutableStateListOf(start) }
     val root = backStack.first()
@@ -166,7 +175,8 @@ fun AppShell(
                 entry<Dest.Debug> {
                     debug?.let {
                         DebugScreen(it, onBack = { backStack.removeAt(backStack.lastIndex) }, actions.setDebugLogging,
-                            actions.shareDebugLogs, actions.deleteDebugLogs)
+                            actions.shareDebugLogs, actions.deleteDebugLogs,
+                            onRunChecks = actions.runChecks, onShowChecks = actions.showChecks)
                     }
                 }
                 entry<Dest.Detail> { key ->

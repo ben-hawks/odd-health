@@ -5,6 +5,15 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+- Ring checks (Ring → Debugging): a read-only test of everything the app
+  reads from the ring (session, device info, battery, each health type's
+  reply and value ranges, reading interval, the ignored temperature request,
+  unknown message types). Results open in a popup with the changes since the
+  previous run, and go to the debug log even while recording is off. Runs by
+  itself a minute after the ring reports a new firmware version, with a
+  notification.
+- Ring tab: "Debug logging" is now **Debugging**.
+
 ## 0.17.1
 
 - Ring tab shows whether the ring is on your finger, not being worn, or on the

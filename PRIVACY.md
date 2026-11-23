@@ -39,11 +39,15 @@ Only when you choose to, in these ways:
    policy. You can revoke Odd Health's permissions, or delete the data it wrote,
    in Health Connect settings at any time. Deleting data in Odd Health does not
    delete what it already wrote to Health Connect.
-2. **Debug logs.** Off by default. When you turn them on (Ring → Debug
-   logging), the app saves the raw Bluetooth traffic with your ring and app
+2. **Debug logs.** Off by default. When you turn them on (Ring → Debugging), the app saves the raw Bluetooth traffic with your ring and app
    events to daily files in its private storage. They contain your health data
    and your ring's Bluetooth address. They are only shared when you tap
    **Share logs** and pick where to send them; **Delete logs** removes them.
+   **Ring checks** (Ring → Debugging, and automatically after a ring firmware
+   update) write their report and the check's Bluetooth traffic to the same
+   log even while it is off. The last ten check reports are also kept in the
+   app's private storage, to compare runs; they hold pass/fail results and
+   short summaries such as value ranges.
 3. **Even export import.** The app reads a zip file you pick. It does not keep
    a copy of the file.
 4. **Bug reports.** Only when you submit a GitHub issue yourself; see below.

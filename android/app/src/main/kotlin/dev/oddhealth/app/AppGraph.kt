@@ -5,6 +5,7 @@ import androidx.work.Configuration
 import dev.oddhealth.app.data.HealthDatabase
 import dev.oddhealth.app.data.HealthRepository
 import dev.oddhealth.app.debug.DebugLog
+import dev.oddhealth.app.ring.RingChecks
 import dev.oddhealth.app.ring.RingState
 import dev.oddhealth.app.sync.SyncManager
 import dev.oddhealth.app.update.UpdateManager
@@ -22,6 +23,7 @@ class AppGraph(app: Application) {
     val repository = HealthRepository(database.records())
     val debugLog = DebugLog(app) { settings.debugLogging.value }
     val ring = RingState(settings.firmware)
+    val checks = RingChecks(app)
     val sync = SyncManager(app, repository, settings, debugLog, scope)
     val updates = UpdateManager(app, settings, debugLog)
 }

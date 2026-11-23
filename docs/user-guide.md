@@ -112,6 +112,30 @@ version with your data intact.
 Updates only work between release builds from GitHub. A test (debug) build
 can't be updated this way; uninstall it and install the release instead.
 
+## After a ring firmware update
+
+<p><img src="../android/app/screenshots/8-debug.png" width="220" alt="Debugging and ring checks"> <img src="../android/app/screenshots/13-checks.png" width="220" alt="Ring check results"></p>
+
+Odd Health reads the ring through an unofficial protocol, so a firmware update
+from the Even app can change what the ring sends. **Ring checks** test this:
+
+- When the app sees a new firmware version, it waits a minute, runs the checks
+  by itself and shows a notification with the result.
+- To run them yourself: **Ring → Debugging → Run checks**. It takes about 15
+  seconds and only reads from the ring, like a normal sync.
+
+The checks ask the ring for each kind of data and test the replies: does each
+request get an answer, do the values decode into sensible ranges with the right
+dates and time zone, is the heart-rate reading interval still about 9 min 45 s,
+does the ring still ignore the temperature request, and are there any message
+types the app doesn't know. The results open in a popup, with what changed
+since the previous run listed first. **Warning** means something behaved
+differently from before and is worth a look; **Note** is information only.
+
+The report and the Bluetooth traffic of the check are written to the debug log
+even while **Record debug log** is off, so you can share them in a bug report
+(see below). **Share** in the popup sends the text of the report.
+
 ## Troubleshooting
 
 | Problem | Try |
@@ -128,9 +152,9 @@ can't be updated this way; uninstall it and install the release instead.
 
 ### Reporting a problem
 
-<p><img src="../android/app/screenshots/12-report.png" width="220" alt="Report a bug"> <img src="../android/app/screenshots/8-debug.png" width="220" alt="Debug logging"></p>
+<p><img src="../android/app/screenshots/12-report.png" width="220" alt="Report a bug"> <img src="../android/app/screenshots/8-debug.png" width="220" alt="Debugging"></p>
 
-1. **Ring → Debug logging** → turn on **Record debug log**.
+1. **Ring → Debugging** → turn on **Record debug log**.
 2. Reproduce the problem (for a sync problem, wait for or trigger a sync).
 3. **Sync → Report a bug**. Turn on **Include debug log** if you want to attach
    it, then tap **Open bug report on GitHub**.
@@ -141,7 +165,7 @@ can't be updated this way; uninstall it and install the release instead.
 
 **GitHub issues are public**, and the logs contain your health data and your
 ring's Bluetooth address. If you'd rather not post them publicly, report the
-problem without the log and say you have one. Alternatively, **Debug logging →
+problem without the log and say you have one. Alternatively, **Debugging →
 Share logs** sends the zip privately to someone you choose. Use **Delete logs**
 when done, delete the copy in Downloads, and turn logging off again; it is off
 by default.

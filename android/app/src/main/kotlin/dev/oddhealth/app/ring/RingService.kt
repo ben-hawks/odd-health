@@ -30,11 +30,17 @@ import dev.oddhealth.app.R
 import dev.oddhealth.app.ui.model.WearState
 import dev.oddhealth.app.graph
 import dev.oddhealth.core.ingest.RingIngest
+import dev.oddhealth.r1.CheckItem
+import dev.oddhealth.r1.CheckOutcome
+import dev.oddhealth.r1.CheckReport
 import dev.oddhealth.r1.DeviceInfo
 import dev.oddhealth.r1.DeviceStatus
 import dev.oddhealth.r1.R1
 import dev.oddhealth.r1.Vitals
+import dev.oddhealth.r1.Observed
 import dev.oddhealth.r1.Reassembler
+import dev.oddhealth.r1.RingCheck
+import dev.oddhealth.r1.SentRequest
 import dev.oddhealth.r1.WearStatus
 import dev.oddhealth.r1.decode
 import dev.oddhealth.r1.healthRequest
@@ -42,6 +48,8 @@ import dev.oddhealth.r1.parseInner
 import dev.oddhealth.r1.systemRequest
 import dev.oddhealth.r1.toHex
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 
 /**
@@ -76,6 +84,11 @@ class RingService : Service() {
         private const val QUIET_CHECK_MS = 10 * 60_000L
         private const val ACTION_TICK = "dev.oddhealth.app.TICK"
         private const val ACTION_RESCHEDULE = "dev.oddhealth.app.RESCHEDULE"
+        private const val ACTION_CHECK = "dev.oddhealth.app.CHECK"
+        /** How long a ring check listens after its requests are queued. */
+        private const val CHECK_LISTEN_MS = 15_000L
+        /** After a firmware change, give the ring time to settle before checking it. */
+        private const val FIRMWARE_CHECK_DELAY_MS = 60_000L
         private val CCCD = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
         private val SERVICE = UUID.fromString(R1.SERVICE_UUID)
         private val WRITE = UUID.fromString(R1.WRITE_CHAR_UUID)
@@ -98,6 +111,11 @@ class RingService : Service() {
             if (canRun(context) && context.graph.ring.running.value) {
                 context.startForegroundService(Intent(context, RingService::class.java).setAction(ACTION_RESCHEDULE))
             }
+        }
+
+        /** Run the ring checks now; results go to [RingChecks] and the debug log. */
+        fun runChecks(context: Context) {
+            if (canRun(context)) context.startForegroundService(Intent(context, RingService::class.java).setAction(ACTION_CHECK))
         }
 
         fun requestData(context: Context) {
@@ -127,6 +145,14 @@ class RingService : Service() {
         otherBytes = 0
     }
 
+    /** Set while a ring check is listening: every notification batch, in order. */
+    private var capture: MutableList<Observed>? = null
+    private val checkSent = mutableListOf<SentRequest>()
+    private var checkStarted = 0L
+    private var checkAutomatic = false
+    private val finishCheck = Runnable { finishCheck() }
+    private val firmwareCheck = Runnable { runChecks(automatic = true) }
+
     // Sequence numbers for our own frames, kept away from the Even app's low numbers.
     private var seq = 0x4F00
 
@@ -154,6 +180,7 @@ class RingService : Service() {
             ACTION_REQUEST -> requestData()
             ACTION_TICK -> tick()
             ACTION_RESCHEDULE -> scheduleTick()
+            ACTION_CHECK -> runChecks(automatic = false)
         }
         return START_STICKY
     }
@@ -206,6 +233,8 @@ class RingService : Service() {
 
     override fun onDestroy() {
         main.removeCallbacksAndMessages(null)
+        // A check cut short still reports what it saw.
+        if (capture != null) finishCheck()
         getSystemService(AlarmManager::class.java).cancel(tickIntent)
         // close() drops only this app's use of the link; the Even app keeps its own.
         gatt?.close()
@@ -346,6 +375,7 @@ class RingService : Service() {
             val batch = reassembler.feedLenient(value) ?: return
             val inner = batch.inner
             if (!batch.crcOk || inner.size < R1.HEADER_LEN || inner[0].toInt() != R1.MARKER) {
+                capture?.add(Observed(null, batch.crcOk))
                 // The Even app also pulls other things over this channel (ring logs, for one).
                 otherBatches++
                 otherBytes += inner.size
@@ -354,6 +384,7 @@ class RingService : Service() {
                 return
             }
             val frame = parseInner(inner)
+            capture?.add(Observed(frame, batch.crcOk))
             val decoded = decode(frame)
             val summary = decoded?.let(::describe)
             log("${frame.name} #${frame.seq}" + (summary?.let { " — $it" } ?: if (frame.data.isEmpty()) "" else " — ${frame.data.size} bytes"))
@@ -378,6 +409,13 @@ class RingService : Service() {
                     )
                 }
                 is DeviceInfo -> {
+                    val previous = graph.settings.firmware
+                    if (previous != null && previous != decoded.firmware) {
+                        log("Ring firmware changed from $previous to ${decoded.firmware}; checking it in a minute")
+                        graph.ring.event(getString(R.string.event_firmware_changed, decoded.firmware))
+                        main.removeCallbacks(firmwareCheck)
+                        main.postDelayed(firmwareCheck, FIRMWARE_CHECK_DELAY_MS)
+                    }
                     graph.settings.firmware = decoded.firmware
                     graph.ring.update { it.copy(firmware = decoded.firmware) }
                 }
@@ -399,6 +437,7 @@ class RingService : Service() {
                 }
             }
         } catch (e: IllegalArgumentException) {
+            capture?.add(Observed(null, false, e.message ?: "unreadable"))
             reassembler.reset()
             log("Unreadable frame: ${e.message}")
         }
@@ -422,6 +461,76 @@ class RingService : Service() {
         send("deviceStatus", systemRequest(R1.SYS_DEVICE_STATUS, nextSeq()))
         for (cmd in listOf(R1.HEALTH_HEART_RATE, R1.HEALTH_SPO2, R1.HEALTH_HRV, R1.HEALTH_ACTIVITY, R1.HEALTH_SLEEP)) {
             send("${R1.HEALTH_CMDS[cmd]} request", healthRequest(cmd, nextSeq()))
+        }
+    }
+
+    // --- ring checks -----------------------------------------------------------
+
+    /**
+     * Send the check requests (reads only, as for a normal sync, plus a
+     * temperature request) and record everything for [CHECK_LISTEN_MS].
+     */
+    private fun runChecks(automatic: Boolean) {
+        val checks = graph.checks
+        if (checks.running.value) return
+        val started = System.currentTimeMillis()
+        if (!ready) {
+            log("Ring check: not connected")
+            checks.finished(
+                CheckReport(started, graph.settings.firmware, null,
+                    listOf(CheckItem("link", getString(R.string.checks_link), CheckOutcome.FAIL, getString(R.string.checks_not_connected)))),
+                automatic,
+            )
+            return
+        }
+        checks.started()
+        graph.debugLog.forced = true
+        log("Ring check started" + if (automatic) " (firmware changed)" else "")
+        graph.ring.event(getString(R.string.event_check_started))
+        checkStarted = started
+        checkAutomatic = automatic
+        checkSent.clear()
+        capture = mutableListOf()
+        sessionOpen = false
+        openSession()
+        checkSent += SentRequest("pairAuth", R1.MODULE_SYSTEM, 0, R1.SYS_PAIR_AUTH, 1)
+        for ((label, module, code) in RingCheck.REQUESTS) {
+            val seq = nextSeq()
+            checkSent += if (module == R1.MODULE_SYSTEM) SentRequest(label, module, 0, code, seq)
+            else SentRequest(label, module, code, R1.HEALTH_SUB_DAILY, seq)
+            send("$label request (check)", RingCheck.request(module, code, seq))
+        }
+        main.postDelayed(finishCheck, CHECK_LISTEN_MS)
+    }
+
+    private fun finishCheck() {
+        val observed = capture?.toList() ?: return
+        capture = null
+        val sent = checkSent.toList()
+        val started = checkStarted
+        val automatic = checkAutomatic
+        graph.scope.launch {
+            val nowSec = System.currentTimeMillis() / 1000
+            val report = try {
+                RingCheck.evaluate(
+                    startedAt = started,
+                    sent = sent,
+                    observed = observed,
+                    nowSec = nowSec,
+                    tzOffsetMin = ZoneId.systemDefault().rules.getOffset(Instant.now()).totalSeconds / 60,
+                    readingTimes = graph.repository.readingTimes(nowSec - 86_400, nowSec),
+                    frequentUpdates = graph.settings.frequentUpdates.value,
+                )
+            } catch (e: RuntimeException) {
+                CheckReport(started, graph.settings.firmware, null,
+                    listOf(CheckItem("error", "Check", CheckOutcome.FAIL, "The check itself failed: $e")))
+            }
+            report.lines().forEach(::log)
+            graph.debugLog.forced = false
+            main.post {
+                graph.ring.event(getString(R.string.event_check_done))
+                graph.checks.finished(report, automatic)
+            }
         }
     }
 

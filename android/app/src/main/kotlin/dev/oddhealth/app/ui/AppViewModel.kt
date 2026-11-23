@@ -180,8 +180,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private val debugFiles = MutableStateFlow(graph.debugLog.files())
 
-    val debug: StateFlow<DebugState?> = combine(graph.settings.debugLogging, debugFiles, now) { on, files, _ ->
-        DebugState(on, graph.debugLog.files().size, graph.debugLog.files().sumOf { it.length() })
+    val debug: StateFlow<DebugState?> = combine(
+        combine(graph.settings.debugLogging, debugFiles, now) { on, _, _ -> on },
+        graph.ring.status, graph.checks.running, graph.checks.latest,
+    ) { on, status, running, latest ->
+        val files = graph.debugLog.files()
+        DebugState(on, files.size, files.sumOf { it.length() }, status.connected, running, latest)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private fun metricOf(kind: RecordKind) = when (kind) {
@@ -295,6 +299,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         graph.debugLog.event("Debug logging turned on")
         debugFiles.value = graph.debugLog.files()
     }
+
+    /** The check results while their popup is open. */
+    val checkDialog: StateFlow<dev.oddhealth.app.ring.CheckResult?> =
+        combine(graph.checks.showing, graph.checks.latest) { show, latest -> latest.takeIf { show } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun runChecks() = RingService.runChecks(getApplication())
 
     fun deleteDebugLogs() {
         graph.debugLog.deleteAll()

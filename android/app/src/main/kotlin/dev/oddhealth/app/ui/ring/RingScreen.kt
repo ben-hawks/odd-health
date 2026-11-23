@@ -178,8 +178,8 @@ fun RingScreen(
                             },
                             {
                                 ListItem(
-                                    headlineContent = { Text(stringResource(R.string.debug_logging)) },
-                                    supportingContent = { Text(stringResource(if (state.debugLogging) R.string.on else R.string.off)) },
+                                    headlineContent = { Text(stringResource(R.string.debug_tools)) },
+                                    supportingContent = { Text(stringResource(if (state.debugLogging) R.string.debug_row_on else R.string.debug_row_off)) },
                                     trailingContent = { Icon(Icons.Rounded.ChevronRight, contentDescription = null) },
                                     modifier = Modifier.clickable(onClick = onDebug),
                                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),

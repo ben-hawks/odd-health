@@ -1,5 +1,6 @@
 package dev.oddhealth.app.ui.sample
 
+import dev.oddhealth.r1.CheckOutcome
 import dev.oddhealth.app.ui.model.ActivitySummary
 import dev.oddhealth.app.ui.model.DetailRow
 import dev.oddhealth.app.ui.model.HealthConnectState
@@ -143,4 +144,29 @@ object SampleData {
             Metric.SLEEP to 208, Metric.SKIN_TEMPERATURE to 130),
         oldest = LocalDate.of(2026, 5, 4),
     )
+
+    /** A check after a firmware update, compared with the run before it. */
+    val checkResult: dev.oddhealth.app.ring.CheckResult by lazy {
+        val at = java.time.Instant.parse("2026-11-17T17:40:00Z").toEpochMilli()
+        fun item(id: String, title: String, o: CheckOutcome, d: String) = dev.oddhealth.r1.CheckItem(id, title, o, d)
+        val before = dev.oddhealth.r1.CheckReport(at - 6 * 86_400_000L, "2.3.2.0008", "603MV1.9.3", listOf(
+            item("firmware", "Firmware version", CheckOutcome.PASS, "2.3.2.0008 is a version this app was tested with"),
+            item("data:heartRate", "Heart rate data", CheckOutcome.PASS, "17 hours, 52–96 bpm; latest 64 bpm, 3 min ago"),
+            item("temperature", "Temperature request", CheckOutcome.PASS, "No reply, as before (temperature comes with sleep)"),
+        ))
+        val after = dev.oddhealth.r1.CheckReport(at, "2.4.0.0011", "603MV1.9.3", listOf(
+            item("pairAuth", "Session (pairAuth)", CheckOutcome.PASS, "Acknowledged"),
+            item("deviceInfo", "Device info", CheckOutcome.PASS, "Firmware 2.4.0.0011, hardware 603MV1.9.3"),
+            item("firmware", "Firmware version", CheckOutcome.INFO, "2.4.0.0011 is newer or different from the tested 2.3.2.0008; check the results below"),
+            item("deviceStatus", "Battery", CheckOutcome.PASS, "72 %"),
+            item("ack:heartRate", "Heart rate request", CheckOutcome.PASS, "Acknowledged"),
+            item("data:heartRate", "Heart rate data", CheckOutcome.PASS, "17 hours, 52–96 bpm; latest 64 bpm, 3 min ago"),
+            item("data:spo2", "Blood oxygen data", CheckOutcome.PASS, "17 hours, 93–99 %"),
+            item("data:sleep", "Sleep data", CheckOutcome.INFO, "No night waiting (normal once the Even app has synced it)"),
+            item("temperature", "Temperature request", CheckOutcome.WARN, "Changed: the ring now answers with 1 data frame(s) — worth decoding"),
+            item("interval", "Heart-rate reading interval", CheckOutcome.PASS, "Median 9 min 46 s over 140 intervals (expected about 9 min 45 s)"),
+            item("unknown", "Unknown messages", CheckOutcome.PASS, "None"),
+        ))
+        dev.oddhealth.app.ring.CheckResult(after, before, dev.oddhealth.r1.RingCheck.compare(before, after))
+    }
 }

@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dev.oddhealth.app.ring.RingChecks
 import dev.oddhealth.app.ring.RingService
 import dev.oddhealth.app.ui.AppActions
 import dev.oddhealth.app.ui.AppShell
@@ -38,7 +39,9 @@ class MainActivity : ComponentActivity() {
         // Health Connect opens us to explain how data is used; show the About screen then.
         val start = if (intent?.action == "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" ||
             intent?.action == Intent.ACTION_VIEW_PERMISSION_USAGE
-        ) Dest.About else if (intent?.getBooleanExtra(UpdateWorker.EXTRA_OPEN_UPDATES, false) == true) Dest.Updates else Dest.Today
+        ) Dest.About else if (intent?.getBooleanExtra(UpdateWorker.EXTRA_OPEN_UPDATES, false) == true) Dest.Updates
+        else if (intent?.getBooleanExtra(RingChecks.EXTRA_OPEN_CHECKS, false) == true) Dest.Debug.also { graph.checks.show() }
+        else Dest.Today
 
         setContent {
             OddHealthTheme {
@@ -50,6 +53,7 @@ class MainActivity : ComponentActivity() {
                 val now by vm.now.collectAsStateWithLifecycle()
                 val importing by vm.importing.collectAsStateWithLifecycle()
                 val refreshing by vm.refreshing.collectAsStateWithLifecycle()
+                val checkDialog by vm.checkDialog.collectAsStateWithLifecycle()
                 val noticeAccepted by graph.settings.noticeAccepted.collectAsStateWithLifecycle()
 
                 val btPermissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
@@ -80,6 +84,7 @@ class MainActivity : ComponentActivity() {
                     detail = vm::detail, now = now, importing = importing, refreshing = refreshing, start = start,
                     version = packageManager.getPackageInfo(packageName, 0).versionName.orEmpty(),
                     noticeAccepted = noticeAccepted,
+                    checkDialog = checkDialog,
                     actions = AppActions(
                         requestData = vm::requestData,
                         setListening = vm::setStayConnected,
@@ -107,6 +112,10 @@ class MainActivity : ComponentActivity() {
                             if (!vm.installUpdate()) startActivity(graph.updates.installPermissionIntent())
                         },
                         setUpdateNotifications = vm::setUpdateNotifications,
+                        runChecks = vm::runChecks,
+                        showChecks = graph.checks::show,
+                        dismissChecks = graph.checks::dismiss,
+                        shareChecks = { shareChecks() },
                         reportBug = { includeLogs ->
                             lifecycleScope.launch {
                                 val url = vm.prepareBugReport(includeLogs)
@@ -123,6 +132,14 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         vm.refreshHealthConnect()
         vm.refreshBattery()
+    }
+
+    private fun shareChecks() {
+        val result = graph.checks.latest.value ?: return
+        val text = (result.report.lines() +
+            result.changes.map { "  changed: ${it.title}: ${it.before ?: "-"} -> ${it.after ?: "-"} (${it.detail})" }).joinToString("\n")
+        val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text)
+        startActivity(Intent.createChooser(send, getString(R.string.checks_title)))
     }
 
     private fun shareDebugLogs() = lifecycleScope.launch {

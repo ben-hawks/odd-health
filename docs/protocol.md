@@ -360,3 +360,17 @@ frames above used sequence numbers `0x4F01`–`0x4F04`, inside Odd Health's
 range, which is why the replies were hard to tell apart; test frames now use
 `0x7E00`–`0x7EFF` (see [Session](#session)). To repeat the status-2 test:
 `python3 tools/r1tool.py request 2 6 2 --status 2`.
+
+## Ring checks (app 0.18)
+
+The app's ring checks (`protocol/.../RingCheck.kt`, Ring → Debugging) encode
+the expectations in this document so a firmware update can be tested in a few
+seconds: pairAuth acked; deviceInfo and deviceStatus decode; every daily
+request (heart rate, SpO2, HRV, activity, sleep) acked with its own sequence
+number; pushes decode with an anchored day start, the phone's time zone and
+plausible values; the median gap between stored heart-rate readings is
+570–610 s; the temperature request (health 3) gets no reply; and no unknown
+module, command or status appears. Reports are compared run to run, and each
+report plus the check's raw traffic lands in the debug log, ready for
+`tools/r1tool.py decode`. When a firmware version is confirmed to behave as
+documented, add it to `RingCheck.TESTED_FIRMWARE`.

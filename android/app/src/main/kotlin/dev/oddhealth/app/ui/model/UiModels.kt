@@ -127,7 +127,14 @@ data class RingScreenState(
     val batteryUnrestricted: Boolean? = null,
 )
 
-data class DebugState(val enabled: Boolean, val files: Int, val bytes: Long)
+data class DebugState(
+    val enabled: Boolean,
+    val files: Int,
+    val bytes: Long,
+    val connected: Boolean = false,
+    val checkRunning: Boolean = false,
+    val lastCheck: dev.oddhealth.app.ring.CheckResult? = null,
+)
 
 enum class TypeStatus { WRITTEN, APP_ONLY, NEEDS_PERMISSION }
 

@@ -28,16 +28,24 @@ class DebugLog(private val context: Context, private val enabled: () -> Boolean)
     private var writer: FileWriter? = null
     private var day: LocalDate? = null
 
+    /**
+     * Set while a ring check runs: its traffic and report are written even when
+     * the log is off, because the user asked for that run.
+     */
+    @Volatile var forced = false
+
+    private fun on() = forced || enabled()
+
     val dir: File get() = File(context.filesDir, "debug").apply { mkdirs() }
 
     fun files(): List<File> = dir.listFiles()?.filter { it.isFile }?.sortedBy { it.name }.orEmpty()
 
     fun raw(direction: String, characteristic: String, hex: String) {
-        if (enabled()) write("${OffsetDateTime.now()}\t$direction\t$characteristic\t$hex")
+        if (on()) write("${OffsetDateTime.now()}\t$direction\t$characteristic\t$hex")
     }
 
     fun event(text: String) {
-        if (enabled()) write("# ${OffsetDateTime.now()} $text")
+        if (on()) write("# ${OffsetDateTime.now()} $text")
     }
 
     fun close() = synchronized(lock) {

@@ -213,4 +213,39 @@
     <string name="battery_usage">Background battery use</string>
     <string name="battery_unrestricted">Unrestricted: the connection and polling run on time</string>
     <string name="battery_optimised">Optimised: Android may delay polling while the phone sleeps. Tap to allow background use.</string>
+    <!-- Ring checks -->
+    <string name="debug_tools">Debugging</string>
+    <string name="debug_row_on">Log on · ring checks</string>
+    <string name="debug_row_off">Log off · ring checks</string>
+    <string name="checks_section">Ring checks</string>
+    <string name="checks_body">Asks the ring for each kind of data and checks the replies against what this app expects, to spot changes after a ring firmware update. Reads only. Runs by itself when the firmware version changes.</string>
+    <string name="checks_run">Run checks</string>
+    <string name="checks_running">Checking… (about 15 seconds)</string>
+    <string name="checks_last">Last run</string>
+    <string name="checks_never">Not run yet</string>
+    <string name="checks_last_n">%1$s · firmware %2$s · passed %3$d, warnings %4$d, failed %5$d</string>
+    <string name="checks_title">Ring checks</string>
+    <string name="checks_summary">Firmware %1$s, %2$s. Passed %3$d, warnings %4$d, failed %5$d.</string>
+    <string name="checks_changes">Changes since the previous run (firmware %1$s, %2$s)</string>
+    <string name="checks_no_changes">No changes.</string>
+    <string name="checks_logged">This report and the traffic of the check are saved in the debug log, even while recording is off.</string>
+    <string name="checks_link">Ring connection</string>
+    <string name="checks_not_connected">Not connected to the ring, so nothing was checked.</string>
+    <string name="checks_channel">Ring checks</string>
+    <string name="checks_notify_title">Ring firmware %1$s checked</string>
+    <string name="checks_notify_ok">Everything works as before. Tap for details.</string>
+    <plurals name="checks_notify_problems">
+        <item quantity="one">%1$d check needs a look. Tap for details.</item>
+        <item quantity="other">%1$d checks need a look. Tap for details.</item>
+    </plurals>
+    <string name="check_pass">Passed</string>
+    <string name="check_warn">Warning</string>
+    <string name="check_fail">Failed</string>
+    <string name="check_info">Note</string>
+    <string name="check_absent">Not checked</string>
+    <string name="close">Close</string>
+    <string name="share">Share</string>
+    <string name="event_firmware_changed">Ring firmware is now %1$s; checking it in a minute</string>
+    <string name="event_check_started">Ring check started</string>
+    <string name="event_check_done">Ring check finished</string>
 </resources>

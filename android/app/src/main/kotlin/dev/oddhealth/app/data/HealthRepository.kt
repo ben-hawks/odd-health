@@ -27,6 +27,10 @@ class HealthRepository(private val dao: RecordDao) : SyncLedger, SyncContext {
     }
 
     /** Estimate resting heart rate for every stored night that has none (data saved before the estimate existed). */
+    /** Times (Unix seconds) of individual heart-rate readings in [from]..[to], oldest first. */
+    suspend fun readingTimes(from: Long, to: Long): List<Long> =
+        dao.overlapping(RecordKind.HEART_RATE_READING.id, from - 1, to).map { it.start }
+
     suspend fun backfillRestingHeartRate(): Int {
         val have = dao.byKindOnce(RecordKind.RESTING_HEART_RATE.id).mapTo(HashSet()) { it.start }
         val estimates = dao.byKindOnce(RecordKind.SLEEP_SESSION.id).map(RecordCodec::fromRow).filterIsInstance<SleepSession>()

@@ -94,7 +94,13 @@ class ScreenshotTest {
         dev.oddhealth.app.ui.report.ReportScreen(DebugState(true, 2, 380_000), {}, {}, {})
     }
 
-    @Test fun debug() = shot("8-debug") { DebugScreen(DebugState(true, 3, 412_000), {}, {}, {}, {}) }
+    @Test fun debug() = shot("8-debug") {
+        DebugScreen(DebugState(true, 3, 412_000, connected = true, lastCheck = SampleData.checkResult), {}, {}, {}, {})
+    }
+
+    @Test fun checks() = shot("13-checks") {
+        dev.oddhealth.app.ui.debug.CheckDialog(SampleData.checkResult, {}, {})
+    }
 
     @Test fun sync() = shot("6-sync") { SyncScreen(SampleData.syncScreen, now, {}, {}, {}) }
 

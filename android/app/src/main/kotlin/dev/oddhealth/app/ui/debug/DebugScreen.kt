@@ -1,18 +1,22 @@
 package dev.oddhealth.app.ui.debug
 
 import android.text.format.Formatter
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.automirrored.rounded.FactCheck
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Button
@@ -23,6 +27,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +36,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -44,6 +50,7 @@ import dev.oddhealth.app.R
 import dev.oddhealth.app.ui.components.ListGroup
 import dev.oddhealth.app.ui.components.Space
 import dev.oddhealth.app.ui.model.DebugState
+import dev.oddhealth.r1.CheckOutcome
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -54,13 +61,15 @@ fun DebugScreen(
     onShare: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
+    onRunChecks: () -> Unit = {},
+    onShowChecks: () -> Unit = {},
 ) {
     val scroll = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
         modifier = modifier.nestedScroll(scroll.nestedScrollConnection),
         topBar = {
             MediumFlexibleTopAppBar(
-                title = { Text(stringResource(R.string.debug_logging)) },
+                title = { Text(stringResource(R.string.debug_tools)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
@@ -113,6 +122,68 @@ fun DebugScreen(
                         Spacer(Modifier.width(ButtonDefaults.IconSpacing))
                         Text(stringResource(R.string.delete_logs))
                     }
+                }
+            }
+            item {
+                Text(
+                    stringResource(R.string.checks_section),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(start = Space.m, top = Space.s),
+                )
+            }
+            item {
+                val last = state.lastCheck?.report
+                ListGroup(
+                    items = listOf(
+                        {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.checks_section)) },
+                                supportingContent = { Text(stringResource(R.string.checks_body)) },
+                                leadingContent = { Icon(Icons.AutoMirrored.Rounded.FactCheck, contentDescription = null) },
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        },
+                        {
+                            ListItem(
+                                headlineContent = { Text(stringResource(R.string.checks_last)) },
+                                supportingContent = {
+                                    Text(
+                                        if (last == null) stringResource(R.string.checks_never)
+                                        else stringResource(
+                                            R.string.checks_last_n, formatCheckTime(last.startedAt), last.firmware ?: "?",
+                                            last.count(CheckOutcome.PASS), last.count(CheckOutcome.WARN), last.count(CheckOutcome.FAIL),
+                                        ),
+                                    )
+                                },
+                                leadingContent = last?.let { r ->
+                                    {
+                                        OutcomeIcon(
+                                            when {
+                                                r.count(CheckOutcome.FAIL) > 0 -> CheckOutcome.FAIL
+                                                r.count(CheckOutcome.WARN) > 0 -> CheckOutcome.WARN
+                                                else -> CheckOutcome.PASS
+                                            },
+                                        )
+                                    }
+                                },
+                                trailingContent = if (last != null) ({ Icon(Icons.Rounded.ChevronRight, contentDescription = null) }) else null,
+                                modifier = if (last != null) Modifier.clickable(onClick = onShowChecks) else Modifier,
+                                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            )
+                        },
+                    ),
+                )
+            }
+            item {
+                FilledTonalButton(onClick = onRunChecks, enabled = state.connected && !state.checkRunning, modifier = Modifier.fillMaxWidth()) {
+                    if (state.checkRunning) {
+                        CircularProgressIndicator(Modifier.size(ButtonDefaults.IconSize), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.AutoMirrored.Rounded.FactCheck, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                    }
+                    Spacer(Modifier.width(ButtonDefaults.IconSpacing))
+                    Text(stringResource(if (state.checkRunning) R.string.checks_running else R.string.checks_run))
                 }
             }
             item {
