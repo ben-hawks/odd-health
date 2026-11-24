@@ -367,9 +367,9 @@ Ring checks (app 0.18.0) on firmware 2.4.1.0002, hardware 603MV1.9.3: all 16
 checks passed. Session, device info, battery, every daily request and its
 data, the 9 min 46 s heart-rate reading interval (median over 144 intervals)
 and the ignored temperature request are unchanged from 2.3.2.0008, and no
-unknown message types appeared. Sleep was not exercised (no night waiting),
-so the sleep record layout, including the nightly temperature, is confirmed
-only once a night arrives on this firmware. Added to
+unknown message types appeared. Sleep was not exercised by the check (no
+night waiting), but the next night synced normally through the app on this
+firmware, so the sleep record layout is unchanged too. Added to
 `RingCheck.TESTED_FIRMWARE`.
 
 ## Ring checks (app 0.18)
