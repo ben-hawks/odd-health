@@ -72,7 +72,7 @@ data class CheckChange(val title: String, val before: CheckOutcome?, val after: 
 
 object RingCheck {
     /** Firmware versions this app's decoding was checked against. */
-    val TESTED_FIRMWARE = setOf("2.3.2.0008")
+    val TESTED_FIRMWARE = setOf("2.3.2.0008", "2.4.1.0002")
 
     /** Ring reading intervals seen so far: 585–594 s. */
     private val READING_INTERVAL_SEC = 570..610
@@ -234,6 +234,8 @@ object RingCheck {
     )
     private val UNITS = mapOf(R1.HEALTH_HEART_RATE to "bpm", R1.HEALTH_SPO2 to "%", R1.HEALTH_HRV to "ms")
 
+    private fun plural(n: Int, word: String) = if (n == 1) "1 $word" else "$n ${word}s"
+
     private fun safeDecode(frame: Frame): Decoded? = try { decode(frame) } catch (e: IllegalArgumentException) { null }
 
     private fun isUnknown(f: Frame): Boolean = when {
@@ -269,7 +271,7 @@ object RingCheck {
                 if (d.records.any { (it.ts ?: 0) > future }) problems += "hours in the future"
                 val good = d.records - bad.toSet()
                 val unit = UNITS[d.cmd].orEmpty()
-                notes += if (good.isEmpty()) "no hours" else "${good.size} hours, ${good.minOf { it.min }}–${good.maxOf { it.max }} $unit"
+                notes += if (good.isEmpty()) "no hours" else "${plural(good.size, "hour")}, ${good.minOf { it.min }}–${good.maxOf { it.max }} $unit"
                 if (d.cmd == R1.HEALTH_HEART_RATE && d.currentTs != null) {
                     val age = (nowSec - d.currentTs) / 60
                     if (d.current !in range) problems += "latest reading ${d.current} out of range"
@@ -282,7 +284,7 @@ object RingCheck {
                 val bad = d.records.filter { it.slot >= 144 || it.steps > 3000 || it.kcalActive > it.kcalTotal }
                 if (bad.isNotEmpty()) problems += "${bad.size} of ${d.records.size} blocks implausible (slot ${bad[0].slot}: ${bad[0].steps} steps)"
                 if (d.records.any { (it.ts ?: 0) > future }) problems += "blocks in the future"
-                notes += "${d.records.size} blocks, ${d.records.sumOf { it.steps }} steps"
+                notes += "${plural(d.records.size, "block")}, ${plural(d.records.sumOf { it.steps }, "step")}"
             }
             is Sleep -> {
                 val length = d.endTs - d.startTs

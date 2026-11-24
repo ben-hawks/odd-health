@@ -5,6 +5,10 @@ Versions follow `MAJOR.MINOR.PATCH`. Releases are tagged `vX.Y.Z`; see
 
 ## Unreleased
 
+- Firmware 2.4.1.0002 confirmed to work: all ring checks pass. It is now
+  reported as a tested version.
+- Ring check wording: "1 hour" instead of "1 hours".
+
 ## 0.18.0
 
 - Ring checks (Ring → Debugging): a read-only test of everything the app

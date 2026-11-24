@@ -361,6 +361,17 @@ range, which is why the replies were hard to tell apart; test frames now use
 `0x7E00`–`0x7EFF` (see [Session](#session)). To repeat the status-2 test:
 `python3 tools/r1tool.py request 2 6 2 --status 2`.
 
+## Firmware 2.4.1.0002, 2026-11-24
+
+Ring checks (app 0.18.0) on firmware 2.4.1.0002, hardware 603MV1.9.3: all 16
+checks passed. Session, device info, battery, every daily request and its
+data, the 9 min 46 s heart-rate reading interval (median over 144 intervals)
+and the ignored temperature request are unchanged from 2.3.2.0008, and no
+unknown message types appeared. Sleep was not exercised (no night waiting),
+so the sleep record layout, including the nightly temperature, is confirmed
+only once a night arrives on this firmware. Added to
+`RingCheck.TESTED_FIRMWARE`.
+
 ## Ring checks (app 0.18)
 
 The app's ring checks (`protocol/.../RingCheck.kt`, Ring → Debugging) encode
